@@ -66,9 +66,9 @@ class PerformanceParameter(Model):
     timestamp = fields.DatetimeField(description="时间戳")
     points = fields.IntField(description="测量点（整型）")
     side = fields.CharEnumField(SideEnum, description="侧标识")
-    overall_u = fields.FloatField(description="总传热系数 (W/(m²·K))")
-    tubeside_h = fields.FloatField(description="管侧传热系数 (W/(m²·K))")
-    shellside_h = fields.FloatField(description="壳侧传热系数 (W/(m²·K))")
+    K = fields.FloatField(description="总传热系数 (W/(m²·K))")
+    alpha_i = fields.FloatField(description="管侧传热系数 (W/(m²·K))")
+    alpha_o = fields.FloatField(description="壳侧传热系数 (W/(m²·K))")
     heat_duty = fields.FloatField(description="热负荷 (W)")
     effectiveness = fields.FloatField(description="有效度")
     lmtd = fields.FloatField(description="对数平均温差 (°C)")
@@ -76,3 +76,17 @@ class PerformanceParameter(Model):
     class Meta:
         table = "performance_parameters"
         unique_together = ("heat_exchanger", "timestamp", "points", "side")
+
+# 模型参数表
+class ModelParameter(Model):
+    """模型参数表，保存a、p和b三个参数的实时值"""
+    id = fields.IntField(pk=True, description="主键")
+    heat_exchanger = fields.ForeignKeyField("models.HeatExchanger", related_name="model_parameters", description="外键，连接换热器表")
+    timestamp = fields.DatetimeField(description="时间戳，每天三点更新一次")
+    a = fields.FloatField(description="模型参数a")
+    p = fields.FloatField(description="模型参数p")
+    b = fields.FloatField(description="模型参数b")
+
+    class Meta:
+        table = "model_parameters"
+        unique_together = ("heat_exchanger", "timestamp")
