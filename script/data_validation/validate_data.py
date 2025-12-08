@@ -107,4 +107,51 @@ async def validate_data():
     test_results["total_tests"] += 1
     # 查询所有不同的points值
     unique_points = await OperationParameter.all().distinct().values_list('points', flat=True)
-    points_are_int = all
+    points_are_int = all(isinstance(p, int) for p in unique_points)
+    if points_are_int:
+        test_results["passed_tests"] += 1
+        test_results["details"].append({"test": "运行参数表points字段类型检查", "status": "PASS", "message": "所有points值都是整数"})
+    else:
+        test_results["failed_tests"] += 1
+        non_int_points = [p for p in unique_points if not isinstance(p, int)]
+        test_results["details"].append({"test": "运行参数表points字段类型检查", "status": "FAIL", "message": f"发现非整数值: {non_int_points}"})
+    
+    # 测试8: 验证side字段只有tube和shell两种值
+    test_results["total_tests"] += 1
+    unique_sides = await OperationParameter.all().distinct().values_list('side', flat=True)
+    valid_sides = {'tube', 'shell'}
+    invalid_sides = set(unique_sides) - valid_sides
+    if not invalid_sides:
+        test_results["passed_tests"] += 1
+        test_results["details"].append({"test": "side字段取值检查", "status": "PASS", "message": f"所有side值都是有效的: {unique_sides}"})
+    else:
+        test_results["failed_tests"] += 1
+        test_results["details"].append({"test": "side字段取值检查", "status": "FAIL", "message": f"发现无效side值: {invalid_sides}"})
+    
+    # 测试9: 验证所有参数表都有heat_exchanger_id=1的数据
+    test_results["total_tests"] += 1
+    op_has_he1 = await OperationParameter.filter(heat_exchanger_id=1).count() > 0
+    pp_has_he1 = await PhysicalParameter.filter(heat_exchanger_id=1).count() > 0
+    perf_has_he1 = await PerformanceParameter.filter(heat_exchanger_id=1).count() > 0
+    
+    if op_has_he1 and pp_has_he1 and perf_has_he1:
+        test_results["passed_tests"] += 1
+        test_results["details"].append({"test": "外键heat_exchanger_id=1检查", "status": "PASS", "message": "所有参数表都有heat_exchanger_id=1的数据"})
+    else:
+        test_results["failed_tests"] += 1
+        issues = []
+        if not op_has_he1:
+            issues.append("运行参数表")
+        if not pp_has_he1:
+            issues.append("物性参数表")
+        if not perf_has_he1:
+            issues.append("性能参数表")
+        test_results["details"].append({"test": "外键heat_exchanger_id=1检查", "status": "FAIL", "message": f"以下表缺少heat_exchanger_id=1的数据: {', '.join(issues)}"})
+    
+    # 测试10: 验证performance_parameters表的K字段不为空
+    test_results["total_tests"] += 1
+    perf_without_k = await PerformanceParameter.filter(K__isnull=True).count()
+    if perf_without_k == 0:
+        test_results["passed_tests"] += 1
+        test_results["details"].append({"test": "性能参数表K字段非空检查", "status": "PASS", "message": "所有性能参数记录都有K值"})
+    else:
