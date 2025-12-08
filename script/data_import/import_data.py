@@ -75,4 +75,60 @@ async def import_cache_full_data(file_path):
         hour = int(hour)
         
         # 转换为时间戳
-        timestamp = convert
+        timestamp = convert_to_timestamp(day, hour)
+        
+        # 换热器编号，默认为1
+        heat_exchanger_id = 1
+        
+        # 1. 运行参数数据
+        operation_param = OperationParameter(
+            heat_exchanger_id=heat_exchanger_id,
+            timestamp=timestamp,
+            points=points,
+            side=side,
+            temperature=row.get('temperature'),
+            pressure=row.get('pressure'),  # 如果没有pressure字段，会使用默认值None
+            flow_rate=row.get('flow_rate'),  # 如果没有flow_rate字段，会使用默认值None
+            velocity=row.get('u')  # u字段对应velocity
+        )
+        operation_data.append(operation_param)
+        
+        # 2. 物性参数数据
+        physical_param = PhysicalParameter(
+            heat_exchanger_id=heat_exchanger_id,
+            timestamp=timestamp,
+            points=points,
+            side=side,
+            density=row.get('rho'),
+            viscosity=row.get('mu'),
+            thermal_conductivity=row.get('lambda'),
+            specific_heat=row.get('Cp'),
+            reynolds=row.get('Re'),
+            prandtl=row.get('Pr')
+        )
+        physical_data.append(physical_param)
+        
+        # 3. 性能参数数据
+        # K值可以来自K或K_actual字段
+        k_value = row.get('K')
+        if pd.isna(k_value):
+            k_value = row.get('K_actual')
+        
+        performance_param = PerformanceParameter(
+            heat_exchanger_id=heat_exchanger_id,
+            timestamp=timestamp,
+            points=points,
+            side=side,
+            K=k_value,
+            alpha_i=row.get('alpha_i'),
+            alpha_o=row.get('alpha_o'),
+            heat_duty=row.get('heat_duty'),  # 如果没有这些字段，会使用默认值None
+            effectiveness=row.get('effectiveness'),
+            lmtd=row.get('LMTD')
+        )
+        performance_data.append(performance_param)
+        
+        # 4. K_predicted数据
+        k_predicted = row.get('K_predicted')
+        if not pd.isna(k_predicted):
+            k_pred_data
