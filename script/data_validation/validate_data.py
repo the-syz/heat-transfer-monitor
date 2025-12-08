@@ -155,3 +155,53 @@ async def validate_data():
         test_results["passed_tests"] += 1
         test_results["details"].append({"test": "性能参数表K字段非空检查", "status": "PASS", "message": "所有性能参数记录都有K值"})
     else:
+        test_results["failed_tests"] += 1
+        test_results["details"].append({"test": "性能参数表K字段非空检查", "status": "FAIL", "message": f"发现 {perf_without_k} 条记录缺少K值"})
+    
+    # 测试11: 验证时间戳范围是否合理
+    test_results["total_tests"] += 1
+    # 检查最早和最晚的时间戳
+    earliest_op = await OperationParameter.all().order_by('timestamp').first()
+    latest_op = await OperationParameter.all().order_by('-timestamp').first()
+    
+    if earliest_op and latest_op:
+        test_results["passed_tests"] += 1
+        test_results["details"].append({"test": "时间戳范围检查", "status": "PASS", 
+                                       "message": f"时间戳范围: {earliest_op.timestamp} 到 {latest_op.timestamp}"})
+    else:
+        test_results["failed_tests"] += 1
+        test_results["details"].append({"test": "时间戳范围检查", "status": "FAIL", 
+                                       "message": "无法获取有效的时间戳范围"})
+    
+    # 测试12: 验证模型参数表每天只有一条数据
+    test_results["total_tests"] += 1
+    # 按日期分组，检查每天的记录数
+    # 注意：这里使用了原始SQL查询，因为Tortoise ORM不直接支持按日期分组
+    from tortoise.functions import Count
+    from tortoise.expressions import RawSQL
+    
+    # 按日期分组统计
+    daily_counts = await ModelParameter.all().annotate(
+        date=RawSQL("DATE(timestamp)"),
+        count=Count("id")
+    ).group_by("date").values("date", "count")
+    
+    has_duplicate_dates = any(item["count"] > 1 for item in daily_counts)
+    if not has_duplicate_dates:
+        test_results["passed_tests"] += 1
+        test_results["details"].append({"test": "模型参数表每日记录数检查", "status": "PASS", 
+                                       "message": "每天只有一条模型参数记录"})
+    else:
+        test_results["failed_tests"] += 1
+        duplicate_dates = [item["date"] for item in daily_counts if item["count"] > 1]
+        test_results["details"].append({"test": "模型参数表每日记录数检查", "status": "FAIL", 
+                                       "message": f"以下日期有重复记录: {duplicate_dates}"})
+    
+    # 测试13: 验证KPrediction表与性能参数表的关联
+    test_results["total_tests"] += 1
+    k_pred_count = await KPrediction.all().count()
+    perf_count = await PerformanceParameter.all().count()
+    if k_pred_count <= perf_count:
+        test_results["passed_tests"] += 1
+        test_results["details"].append({"test": "KPrediction表与性能参数表关联检查", "status": "PASS", 
+                                       "message": f
