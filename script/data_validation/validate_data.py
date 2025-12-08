@@ -204,4 +204,62 @@ async def validate_data():
     if k_pred_count <= perf_count:
         test_results["passed_tests"] += 1
         test_results["details"].append({"test": "KPrediction表与性能参数表关联检查", "status": "PASS", 
-                                       "message": f
+                                       "message": f"KPrediction记录数({k_pred_count})小于等于性能参数记录数({perf_count})"})
+    else:
+        test_results["failed_tests"] += 1
+        test_results["details"].append({"test": "KPrediction表与性能参数表关联检查", "status": "FAIL", 
+                                       "message": f"KPrediction记录数({k_pred_count})大于性能参数记录数({perf_count})"})
+    
+    # 生成测试报告
+    print("\n=== 数据完整性测试报告 ===")
+    print(f"测试时间: {datetime.now()}")
+    print(f"总测试数: {test_results['total_tests']}")
+    print(f"通过测试: {test_results['passed_tests']}")
+    print(f"失败测试: {test_results['failed_tests']}")
+    print(f"通过率: {test_results['passed_tests'] / test_results['total_tests'] * 100:.2f}%")
+    
+    print("\n详细结果:")
+    for detail in test_results["details"]:
+        status_icon = "✓" if detail["status"] == "PASS" else "✗"
+        print(f"{status_icon} {detail['test']}: {detail['message']}")
+    
+    print("\n=== 数据完整性测试完成 ===")
+    
+    # 返回测试结果
+    return test_results
+
+# 统计各表数据量
+async def count_table_data():
+    """统计各表数据量"""
+    print("\n=== 各表数据量统计 ===")
+    
+    tables = [
+        ("换热器表", HeatExchanger),
+        ("运行参数表", OperationParameter),
+        ("物性参数表", PhysicalParameter),
+        ("性能参数表", PerformanceParameter),
+        ("模型参数表", ModelParameter),
+        ("K预测值表", KPrediction)
+    ]
+    
+    for table_name, model in tables:
+        count = await model.all().count()
+        print(f"{table_name}: {count} 条记录")
+
+# 主导函数
+async def main():
+    """主导函数"""
+    # 初始化数据库连接
+    await init_db()
+    
+    try:
+        # 运行数据完整性测试
+        await validate_data()
+        
+        # 统计各表数据量
+        await count_table_data()
+        
+    except Exception as e:
+        print(f"\n测试过程中发生错误: {e}")
+        import traceback
+        trace
