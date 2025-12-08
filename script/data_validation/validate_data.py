@@ -67,4 +67,44 @@ async def validate_data():
     test_results["total_tests"] += 1
     pp_count = await PhysicalParameter.all().count()
     if pp_count > 0:
-        test_results["passed_tests
+        test_results["passed_tests"] += 1
+        test_results["details"].append({"test": "物性参数表数据检查", "status": "PASS", "message": f"物性参数表有 {pp_count} 条数据"})
+    else:
+        test_results["failed_tests"] += 1
+        test_results["details"].append({"test": "物性参数表数据检查", "status": "FAIL", "message": "物性参数表没有数据"})
+    
+    # 测试4: 验证性能参数表数据
+    test_results["total_tests"] += 1
+    perf_count = await PerformanceParameter.all().count()
+    if perf_count > 0:
+        test_results["passed_tests"] += 1
+        test_results["details"].append({"test": "性能参数表数据检查", "status": "PASS", "message": f"性能参数表有 {perf_count} 条数据"})
+    else:
+        test_results["failed_tests"] += 1
+        test_results["details"].append({"test": "性能参数表数据检查", "status": "FAIL", "message": "性能参数表没有数据"})
+    
+    # 测试5: 验证模型参数表数据
+    test_results["total_tests"] += 1
+    model_count = await ModelParameter.all().count()
+    if model_count > 0:
+        test_results["passed_tests"] += 1
+        test_results["details"].append({"test": "模型参数表数据检查", "status": "PASS", "message": f"模型参数表有 {model_count} 条数据"})
+    else:
+        test_results["failed_tests"] += 1
+        test_results["details"].append({"test": "模型参数表数据检查", "status": "FAIL", "message": "模型参数表没有数据"})
+    
+    # 测试6: 验证KPrediction表数据
+    test_results["total_tests"] += 1
+    k_pred_count = await KPrediction.all().count()
+    if k_pred_count > 0:
+        test_results["passed_tests"] += 1
+        test_results["details"].append({"test": "KPrediction表数据检查", "status": "PASS", "message": f"KPrediction表有 {k_pred_count} 条数据"})
+    else:
+        test_results["failed_tests"] += 1
+        test_results["details"].append({"test": "KPrediction表数据检查", "status": "FAIL", "message": "KPrediction表没有数据"})
+    
+    # 测试7: 验证operation_parameters表的points字段都是整数
+    test_results["total_tests"] += 1
+    # 查询所有不同的points值
+    unique_points = await OperationParameter.all().distinct().values_list('points', flat=True)
+    points_are_int = all
