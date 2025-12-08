@@ -157,4 +157,69 @@ def results_to_dataframes(results):
     for key, data in results.items():
         if data:
             df = pd.DataFrame(data)
-            # 
+            # 按points和timestamp排序
+            df = df.sort_values(by=["points", "timestamp"])
+            dataframes[key] = df
+        else:
+            dataframes[key] = pd.DataFrame()
+    
+    return dataframes
+
+# 异步查询包装函数
+def async_query_wrapper(heat_exchanger_id, side, selected_date, selected_time):
+    """异步查询包装函数，用于在同步环境中调用"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    try:
+        loop.run_until_complete(init_db())
+        results = loop.run_until_complete(query_data(heat_exchanger_id, side, selected_date, selected_time))
+        return results
+    finally:
+        loop.run_until_complete(close_db())
+        loop.close()
+
+# 获取换热器列表包装函数
+def get_heat_exchangers_wrapper():
+    """获取换热器列表包装函数"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    try:
+        loop.run_until_complete(init_db())
+        heat_exchangers = loop.run_until_complete(get_heat_exchangers())
+        return heat_exchangers
+    finally:
+        loop.run_until_complete(close_db())
+        loop.close()
+
+# 主应用
+
+def main():
+    """主应用"""
+    st.set_page_config(
+        page_title="换热器监测系统数据查询",
+        page_icon="📊",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    
+    # 应用标题
+    st.title("📊 换热器监测系统数据查询")
+    st.markdown("---")
+    
+    # 侧边栏
+    st.sidebar.header("查询参数")
+    
+    # 获取换热器列表
+    heat_exchangers = get_heat_exchangers_wrapper()
+    
+    if not heat_exchangers:
+        st.error("未找到换热器数据")
+        return
+    
+    # 选择换热器
+    heat_exchanger_options = {he[0]: he[1] for he in heat_exchangers}
+    selected_he_id = st.sidebar.selectbox(
+        "选择换热器",
+        list(
