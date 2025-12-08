@@ -1,2 +1,48 @@
 from tortoise import Model, fields
-from
+from enum import Enum
+
+# 侧标识枚举
+class SideEnum(str, Enum):
+    TUBE = "tube"  # 管侧
+    SHELL = "shell"  # 壳侧
+
+# 换热器表
+class HeatExchanger(Model):
+    """换热器信息表"""
+    id = fields.IntField(pk=True, description="主键，换热器编号")
+    type = fields.CharField(max_length=50, description="换热器种类")
+    tube_side_fluid = fields.CharField(max_length=50, description="管侧工质")
+    shell_side_fluid = fields.CharField(max_length=50, description="壳侧工质")
+    tube_section_count = fields.IntField(description="管侧分段数")
+    shell_section_count = fields.IntField(description="壳侧分段数")
+    d_i_original = fields.FloatField(description="原始内径 (m)")
+    d_o = fields.FloatField(description="外径 (m)")
+    lambda_t = fields.FloatField(description="管壁导热系数 (W/(m·K))")
+
+    class Meta:
+        table = "heat_exchanger"
+
+# 运行参数表
+class OperationParameter(Model):
+    """运行参数表"""
+    id = fields.IntField(pk=True, description="主键")
+    heat_exchanger = fields.ForeignKeyField("models.HeatExchanger", related_name="operation_parameters", description="外键，连接换热器表")
+    timestamp = fields.DatetimeField(description="时间戳")
+    points = fields.IntField(description="测量点（整型）")
+    side = fields.CharEnumField(SideEnum, description="侧标识")
+    temperature = fields.FloatField(description="温度 (°C)")
+    pressure = fields.FloatField(description="压力 (Pa)")
+    flow_rate = fields.FloatField(description="流量 (m³/s)")
+    velocity = fields.FloatField(description="流速 (m/s)")
+
+    class Meta:
+        table = "operation_parameters"
+        unique_together = ("heat_exchanger", "timestamp", "points", "side")
+
+# 物性参数表
+class PhysicalParameter(Model):
+    """物性参数表"""
+    id = fields.IntField(pk=True, description="主键")
+    heat_exchanger = fields.ForeignKeyField("models.HeatExchanger", related_name="physical_parameters", description="外键，连接换热器表")
+    timestamp = fields.DatetimeField(description="时间戳")
+    points = fields.IntField(description="测量
