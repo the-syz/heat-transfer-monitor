@@ -83,4 +83,78 @@ async def query_data(heat_exchanger_id, side, selected_date, selected_time):
     for pp in physical_params:
         results["physical"].append({
             "timestamp": pp.timestamp,
-           
+            "points": pp.points,
+            "density": pp.density,
+            "viscosity": pp.viscosity,
+            "thermal_conductivity": pp.thermal_conductivity,
+            "specific_heat": pp.specific_heat,
+            "reynolds": pp.reynolds,
+            "prandtl": pp.prandtl
+        })
+    
+    # 查询性能参数
+    performance_params = await PerformanceParameter.filter(
+        heat_exchanger_id=heat_exchanger_id,
+        side=side,
+        timestamp__range=(start_time, end_time)
+    ).all()
+    
+    for perf in performance_params:
+        results["performance"].append({
+            "timestamp": perf.timestamp,
+            "points": perf.points,
+            "K": perf.K,
+            "alpha_i": perf.alpha_i,
+            "alpha_o": perf.alpha_o,
+            "heat_duty": perf.heat_duty,
+            "effectiveness": perf.effectiveness,
+            "lmtd": perf.lmtd
+        })
+    
+    # 查询K预测值
+    k_predictions = await KPrediction.filter(
+        heat_exchanger_id=heat_exchanger_id,
+        side=side,
+        timestamp__range=(start_time, end_time)
+    ).all()
+    
+    for kp in k_predictions:
+        results["k_prediction"].append({
+            "timestamp": kp.timestamp,
+            "points": kp.points,
+            "K_predicted": kp.K_predicted
+        })
+    
+    # 查询模型参数
+    # 模型参数每天更新一次，查询当天的数据
+    model_params = await ModelParameter.filter(
+        heat_exchanger_id=heat_exchanger_id,
+        timestamp__date=selected_date
+    ).all()
+    
+    for mp in model_params:
+        results["model"].append({
+            "timestamp": mp.timestamp,
+            "a": mp.a,
+            "p": mp.p,
+            "b": mp.b
+        })
+    
+    return results
+
+# 获取所有换热器列表
+async def get_heat_exchangers():
+    """获取所有换热器列表"""
+    heat_exchangers = await HeatExchanger.all().order_by("id").all()
+    return [(he.id, f"换热器 {he.id} - {he.type}") for he in heat_exchangers]
+
+# 将结果转换为DataFrame
+
+def results_to_dataframes(results):
+    """将查询结果转换为DataFrame"""
+    dataframes = {}
+    
+    for key, data in results.items():
+        if data:
+            df = pd.DataFrame(data)
+            # 
