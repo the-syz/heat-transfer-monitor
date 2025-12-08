@@ -265,3 +265,65 @@ async def import_model_params(file_path):
     # 初始化数据列表
     model_param_data = []
     
+    # 处理每行数据
+    for _, row in df.iterrows():
+        # 获取day
+        day = row.get('day', 0)
+        
+        # 每天3点更新，所以hour=3
+        timestamp = convert_to_timestamp(day, 3)
+        
+        # 换热器编号，默认为1
+        heat_exchanger_id = 1
+        
+        # 创建模型参数数据
+        model_param = ModelParameter(
+            heat_exchanger_id=heat_exchanger_id,
+            timestamp=timestamp,
+            a=row.get('a'),
+            p=row.get('p'),
+            b=row.get('b')
+        )
+        model_param_data.append(model_param)
+    
+    # 批量插入数据
+    inserted_counts = {}
+    
+    if model_param_data:
+        inserted_counts['model_parameters'] = await batch_insert(ModelParameter, model_param_data, IMPORT_CONFIG['batch_size'])
+    
+    print(f"文件 {file_path} 导入完成")
+    print(f"导入数据统计: {inserted_counts}")
+    
+    return {
+        "file": file_path,
+        "success": True,
+        "inserted_counts": inserted_counts
+    }
+
+# 主导入函数
+async def main():
+    """主导入函数"""
+    print("=== 开始数据导入 ===")
+    print(f"当前时间: {datetime.now()}")
+    print(f"数据源路径: {DATA_SOURCE_PATHS}")
+    print(f"导入配置: {IMPORT_CONFIG}")
+    
+    # 初始化数据库连接
+    await init_db()
+    
+    try:
+        # 结果统计
+        total_results = []
+        
+        # 1. 导入cache目录下的full_data.csv文件
+        cache_files = get_all_csv_files(DATA_SOURCE_PATHS['cache'])
+        cache_full_data_files = [f for f in cache_files if 'full_data' in f]
+        print(f"\n找到 {len(cache_full_data_files)} 个cache full_data文件")
+        
+        for file_path in cache_full_data_files:
+            result = await import_cache_full_data(file_path)
+            total_results.append(result)
+        
+        # 2. 导入heat_transfer.csv文件
+        heat_transfer_dir = os.path.join(DATA_SOURCE_PATHS['result_all_data_in_1'], 'two_stage_linear', 'heat
