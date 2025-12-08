@@ -326,4 +326,47 @@ async def main():
             total_results.append(result)
         
         # 2. 导入heat_transfer.csv文件
-        heat_transfer_dir = os.path.join(DATA_SOURCE_PATHS['result_all_data_in_1'], 'two_stage_linear', 'heat
+        heat_transfer_dir = os.path.join(DATA_SOURCE_PATHS['result_all_data_in_1'], 'two_stage_linear', 'heat_transfer_coefficients')
+        if os.path.exists(heat_transfer_dir):
+            heat_transfer_files = get_all_csv_files(heat_transfer_dir)
+            print(f"\n找到 {len(heat_transfer_files)} 个heat_transfer文件")
+            
+            for file_path in heat_transfer_files:
+                result = await import_heat_transfer_data(file_path)
+                total_results.append(result)
+        
+        # 3. 导入模型参数文件
+        model_params_dir = os.path.join(DATA_SOURCE_PATHS['result_all_data_in_1'], 'nonlinear_regression', 'daily_parameters')
+        if os.path.exists(model_params_dir):
+            model_param_files = get_all_csv_files(model_params_dir)
+            print(f"\n找到 {len(model_param_files)} 个模型参数文件")
+            
+            for file_path in model_param_files:
+                result = await import_model_params(file_path)
+                total_results.append(result)
+        
+        # 4. 导入data目录下的operation_parameters.csv和performance_parameters.csv文件
+        data_dir = DATA_SOURCE_PATHS['data']
+        if os.path.exists(data_dir):
+            data_files = get_all_csv_files(data_dir)
+            operation_files = [f for f in data_files if 'operation_parameters' in f]
+            performance_files = [f for f in data_files if 'performance_parameters' in f]
+            
+            print(f"\n找到 {len(operation_files)} 个operation_parameters文件")
+            print(f"找到 {len(performance_files)} 个performance_parameters文件")
+            
+            # TODO: 实现这两种文件的导入逻辑
+        
+        # 打印导入结果汇总
+        print("\n=== 导入结果汇总 ===")
+        success_count = 0
+        for result in total_results:
+            if result['success']:
+                success_count += 1
+                print(f"✓ {result['file']}: {result['inserted_counts']}")
+            else:
+                print(f"✗ {result['file']}: {result.get('message', '导入失败')}")
+        
+        print(f"\n总文件数: {len(total_results)}")
+        print(f"成功导入: {success_count}")
+        print(f
