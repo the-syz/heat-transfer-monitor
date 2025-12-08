@@ -276,4 +276,58 @@ def main():
                 st.info("未找到运行参数数据")
         
         # 物性参数
-        with tabs
+        with tabs[1]:
+            if not dataframes["physical"].empty:
+                st.subheader("物性参数")
+                st.dataframe(dataframes["physical"], use_container_width=True)
+            else:
+                st.info("未找到物性参数数据")
+        
+        # 性能参数
+        with tabs[2]:
+            if not dataframes["performance"].empty:
+                st.subheader("性能参数")
+                st.dataframe(dataframes["performance"], use_container_width=True)
+            else:
+                st.info("未找到性能参数数据")
+        
+        # K预测值
+        with tabs[3]:
+            if not dataframes["k_prediction"].empty:
+                st.subheader("K预测值")
+                st.dataframe(dataframes["k_prediction"], use_container_width=True)
+            else:
+                st.info("未找到K预测值数据")
+        
+        # 模型参数
+        with tabs[4]:
+            if not dataframes["model"].empty:
+                st.subheader("模型参数")
+                st.dataframe(dataframes["model"], use_container_width=True)
+            else:
+                st.info("未找到模型参数数据")
+    
+    # 应用说明
+    with st.expander("📋 应用说明"):
+        st.markdown("""
+        ### 换热器监测系统数据查询工具
+        
+        **功能说明**:
+        - 支持按换热器编号、管侧/壳侧、日期、时间查询数据
+        - 查询结果包括运行参数、物性参数、性能参数、K预测值和模型参数
+        - 查询±1小时范围内的数据
+        - 结果按points和timestamp排序
+        
+        **使用步骤**:
+        1. 在侧边栏选择换热器
+        2. 选择管侧或壳侧
+        3. 选择查询日期和时间
+        4. 点击"查询数据"按钮
+        5. 在标签页中查看不同类型的参数
+        
+        **数据说明**:
+        - 运行参数: 温度、压力、流量、流速等
+        - 物性参数: 密度、粘度、导热系数、比热容、雷诺数、普朗特数等
+        - 性能参数: 总传热系数K、管侧传热系数alpha_i、壳侧传热系数alpha_o、热负荷、有效度、对数平均温差等
+        - K预测值: 预测的总传热系数
+        - 
