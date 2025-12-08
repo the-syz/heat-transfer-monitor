@@ -196,4 +196,72 @@ async def import_heat_transfer_data(file_path):
         
         # 处理points和side
         points_str = row.get('points', '')
-        points,
+        points, side = process_points(str(points_str))
+        if points is None:
+            continue
+        
+        # 换热器编号，默认为1
+        heat_exchanger_id = 1
+        
+        # 1. 性能参数数据
+        performance_param = PerformanceParameter(
+            heat_exchanger_id=heat_exchanger_id,
+            timestamp=timestamp,
+            points=points,
+            side=side,
+            K=row.get('K_actual'),
+            alpha_i=row.get('alpha_i'),
+            alpha_o=row.get('alpha_o')
+        )
+        performance_data.append(performance_param)
+        
+        # 2. K_predicted数据
+        k_predicted = row.get('K_predicted')
+        if not pd.isna(k_predicted):
+            k_pred_data = KPrediction(
+                heat_exchanger_id=heat_exchanger_id,
+                timestamp=timestamp,
+                points=points,
+                side=side,
+                K_predicted=k_predicted
+            )
+            k_prediction_data.append(k_pred_data)
+    
+    # 批量插入数据
+    inserted_counts = {}
+    
+    if performance_data:
+        inserted_counts['performance_parameters'] = await batch_insert(PerformanceParameter, performance_data, IMPORT_CONFIG['batch_size'])
+    
+    if k_prediction_data:
+        inserted_counts['k_predictions'] = await batch_insert(KPrediction, k_prediction_data, IMPORT_CONFIG['batch_size'])
+    
+    print(f"文件 {file_path} 导入完成")
+    print(f"导入数据统计: {inserted_counts}")
+    
+    return {
+        "file": file_path,
+        "success": True,
+        "inserted_counts": inserted_counts
+    }
+
+# 导入result_all_data_in_1/nonlinear_regression/daily_parameters/day_X_params.csv文件
+async def import_model_params(file_path):
+    """导入模型参数文件数据
+    
+    Args:
+        file_path (str): 文件路径
+        
+    Returns:
+        dict: 导入结果统计
+    """
+    print(f"开始导入文件: {file_path}")
+    
+    # 读取CSV文件
+    df = read_csv_file(file_path)
+    if df is None:
+        return {"file": file_path, "success": False, "message": "读取文件失败"}
+    
+    # 初始化数据列表
+    model_param_data = []
+    
