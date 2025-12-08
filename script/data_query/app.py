@@ -222,4 +222,58 @@ def main():
     heat_exchanger_options = {he[0]: he[1] for he in heat_exchangers}
     selected_he_id = st.sidebar.selectbox(
         "选择换热器",
-        list(
+        list(heat_exchanger_options.keys()),
+        format_func=lambda x: heat_exchanger_options[x]
+    )
+    
+    # 选择管侧/壳侧
+    side = st.sidebar.selectbox(
+        "选择侧标识",
+        ["tube", "shell"],
+        format_func=lambda x: "管侧" if x == "tube" else "壳侧"
+    )
+    
+    # 选择日期
+    selected_date = st.sidebar.date_input(
+        "选择日期",
+        value=datetime(2022, 1, 1),
+        min_value=datetime(2022, 1, 1),
+        max_value=datetime(2024, 12, 31)
+    )
+    
+    # 选择时间
+    selected_time = st.sidebar.time_input(
+        "选择时间",
+        value=datetime(2022, 1, 1, 0, 0).time()
+    )
+    
+    # 查询按钮
+    query_button = st.sidebar.button("🔍 查询数据")
+    
+    # 查询结果显示
+    if query_button:
+        st.markdown(f"### 查询结果")
+        st.markdown(f"**换热器**: {heat_exchanger_options[selected_he_id]}")
+        st.markdown(f"**侧标识**: {'管侧' if side == 'tube' else '壳侧'}")
+        st.markdown(f"**日期**: {selected_date.strftime('%Y-%m-%d')}")
+        st.markdown(f"**时间**: {selected_time.strftime('%H:%M:%S')}")
+        st.markdown("---")
+        
+        # 查询数据
+        with st.spinner("正在查询数据..."):
+            results = async_query_wrapper(selected_he_id, side, selected_date, selected_time)
+            dataframes = results_to_dataframes(results)
+        
+        # 显示结果
+        tabs = st.tabs(["运行参数", "物性参数", "性能参数", "K预测值", "模型参数"])
+        
+        # 运行参数
+        with tabs[0]:
+            if not dataframes["operation"].empty:
+                st.subheader("运行参数")
+                st.dataframe(dataframes["operation"], use_container_width=True)
+            else:
+                st.info("未找到运行参数数据")
+        
+        # 物性参数
+        with tabs
