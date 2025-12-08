@@ -4,6 +4,9 @@ trying-code/
 # Ignore vue-project folder
 vue-project/
 
+# Ignore rules
+.trae/
+
 # Ignore node_modules (if any)
 node_modules/
 
