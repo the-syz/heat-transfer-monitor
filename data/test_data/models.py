@@ -45,4 +45,43 @@ class PhysicalParameter(Model):
     id = fields.IntField(pk=True, description="主键")
     heat_exchanger = fields.ForeignKeyField("models.HeatExchanger", related_name="physical_parameters", description="外键，连接换热器表")
     timestamp = fields.DatetimeField(description="时间戳")
-    points = fields.IntField(description="测量
+    points = fields.IntField(description="测量点（整型）")
+    side = fields.CharEnumField(SideEnum, description="侧标识")
+    density = fields.FloatField(description="密度 (kg/m³)")
+    viscosity = fields.FloatField(description="动力粘度 (Pa·s)")
+    thermal_conductivity = fields.FloatField(description="导热系数 (W/(m·K))")
+    specific_heat = fields.FloatField(description="比热容 (J/(kg·K))")
+    reynolds = fields.FloatField(description="雷诺数")
+    prandtl = fields.FloatField(description="普朗特数")
+
+    class Meta:
+        table = "physical_parameters"
+        unique_together = ("heat_exchanger", "timestamp", "points", "side")
+
+# 性能参数表
+class PerformanceParameter(Model):
+    """性能参数表"""
+    id = fields.IntField(pk=True, description="主键")
+    heat_exchanger = fields.ForeignKeyField("models.HeatExchanger", related_name="performance_parameters", description="外键，连接换热器表")
+    timestamp = fields.DatetimeField(description="时间戳")
+    points = fields.IntField(description="测量点（整型）")
+    side = fields.CharEnumField(SideEnum, description="侧标识")
+    K = fields.FloatField(description="总传热系数 (W/(m²·K))")
+    alpha_i = fields.FloatField(description="管侧传热系数 (W/(m²·K))")
+    alpha_o = fields.FloatField(description="壳侧传热系数 (W/(m²·K))")
+    heat_duty = fields.FloatField(description="热负荷 (W)")
+    effectiveness = fields.FloatField(description="有效度")
+    lmtd = fields.FloatField(description="对数平均温差 (°C)")
+
+    class Meta:
+        table = "performance_parameters"
+        unique_together = ("heat_exchanger", "timestamp", "points", "side")
+
+# 模型参数表
+class ModelParameter(Model):
+    """模型参数表，保存a、p和b三个参数的实时值"""
+    id = fields.IntField(pk=True, description="主键")
+    heat_exchanger = fields.ForeignKeyField("models.HeatExchanger", related_name="model_parameters", description="外键，连接换热器表")
+    timestamp = fields.DatetimeField(description="时间戳，每天三点更新一次")
+    a = fields.FloatField(description="模型参数a")
+    p = fields.FloatField(description="模型
