@@ -35,3 +35,9 @@ __pycache__/
 # Ignore Excel files
 *.xlsx
 *.xls
+
+# Ignore Baidu Netdisk sync temporary files
+*.sync*
+~$*
+.baiduyun*
+.bdsync*
