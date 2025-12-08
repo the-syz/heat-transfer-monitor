@@ -131,4 +131,69 @@ async def import_cache_full_data(file_path):
         # 4. K_predicted数据
         k_predicted = row.get('K_predicted')
         if not pd.isna(k_predicted):
-            k_pred_data
+            k_pred_data = KPrediction(
+                heat_exchanger_id=heat_exchanger_id,
+                timestamp=timestamp,
+                points=points,
+                side=side,
+                K_predicted=k_predicted
+            )
+            k_prediction_data.append(k_pred_data)
+    
+    # 批量插入数据
+    inserted_counts = {}
+    
+    if operation_data:
+        inserted_counts['operation_parameters'] = await batch_insert(OperationParameter, operation_data, IMPORT_CONFIG['batch_size'])
+    
+    if physical_data:
+        inserted_counts['physical_parameters'] = await batch_insert(PhysicalParameter, physical_data, IMPORT_CONFIG['batch_size'])
+    
+    if performance_data:
+        inserted_counts['performance_parameters'] = await batch_insert(PerformanceParameter, performance_data, IMPORT_CONFIG['batch_size'])
+    
+    if k_prediction_data:
+        inserted_counts['k_predictions'] = await batch_insert(KPrediction, k_prediction_data, IMPORT_CONFIG['batch_size'])
+    
+    print(f"文件 {file_path} 导入完成")
+    print(f"导入数据统计: {inserted_counts}")
+    
+    return {
+        "file": file_path,
+        "success": True,
+        "inserted_counts": inserted_counts
+    }
+
+# 导入result_all_data_in_1/two_stage_linear/heat_transfer_coefficients/day_X_heat_transfer.csv文件
+async def import_heat_transfer_data(file_path):
+    """导入heat_transfer.csv文件数据
+    
+    Args:
+        file_path (str): 文件路径
+        
+    Returns:
+        dict: 导入结果统计
+    """
+    print(f"开始导入文件: {file_path}")
+    
+    # 读取CSV文件
+    df = read_csv_file(file_path)
+    if df is None:
+        return {"file": file_path, "success": False, "message": "读取文件失败"}
+    
+    # 初始化数据列表
+    performance_data = []
+    k_prediction_data = []
+    
+    # 处理每行数据
+    for _, row in df.iterrows():
+        # 获取day和hour
+        day = row.get('day', 0)
+        hour = row.get('hour', 0)
+        
+        # 转换为时间戳
+        timestamp = convert_to_timestamp(day, hour)
+        
+        # 处理points和side
+        points_str = row.get('points', '')
+        points,
