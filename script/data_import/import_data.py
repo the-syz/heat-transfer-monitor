@@ -369,4 +369,19 @@ async def main():
         
         print(f"\n总文件数: {len(total_results)}")
         print(f"成功导入: {success_count}")
-        print(f
+        print(f"失败导入: {len(total_results) - success_count}")
+        
+        print("\n=== 数据导入完成 ===")
+        print(f"结束时间: {datetime.now()}")
+        
+    except Exception as e:
+        print(f"\n导入过程中发生错误: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        # 关闭数据库连接
+        await close_db()
+
+# 运行主函数
+if __name__ == "__main__":
+    asyncio.run(main())
