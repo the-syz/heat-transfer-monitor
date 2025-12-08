@@ -262,4 +262,11 @@ async def main():
     except Exception as e:
         print(f"\n测试过程中发生错误: {e}")
         import traceback
-        trace
+        traceback.print_exc()
+    finally:
+        # 关闭数据库连接
+        await close_db()
+
+# 运行主函数
+if __name__ == "__main__":
+    asyncio.run(main())
