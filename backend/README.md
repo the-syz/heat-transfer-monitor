@@ -26,17 +26,20 @@ backend/
 ## 主要功能
 
 ### 1. 数据处理
+
 - 从测试数据库读取运行参数
 - 计算物理参数（密度、粘度、比热容等）
 - 将数据存储到生产数据库
 
 ### 2. 传热系数计算
+
 - 使用LMTD法计算K_lmtd
 - 使用非线性回归模型预测K值
 - 计算管侧传热系数alpha_i
 - 计算结垢热阻
 
 ### 3. RESTful API接口
+
 - 健康检查
 - 数据处理和性能计算
 - 参数查询
@@ -94,12 +97,15 @@ http://localhost:8000/docs
 ## API接口说明
 
 ### 健康检查
+
 - **GET** `/health`: 检查API是否正常运行
 
 ### 数据处理
+
 - **POST** `/process-data/{day}/{hour}`: 处理指定时间的数据
 
 ### 参数查询
+
 - **GET** `/operation-parameters`: 获取运行参数
 - **GET** `/physical-parameters`: 获取物理参数
 - **GET** `/k-management`: 获取K_lmtd数据
@@ -108,6 +114,7 @@ http://localhost:8000/docs
 - **GET** `/heat-exchangers`: 获取换热器信息
 
 ### 性能计算
+
 - **GET** `/calculate-performance/{day}/{hour}`: 计算指定时间的性能
 
 ## 测试
@@ -123,15 +130,15 @@ python test_calculator.py
 
 1. 启动API服务
 2. 访问API文档
-3. 调用`/process-data/{day}/{hour}`接口处理数据
-4. 调用`/calculate-performance/{day}/{hour}`接口计算性能
+3. 调用 `/process-data/{day}/{hour}`接口处理数据
+4. 调用 `/calculate-performance/{day}/{hour}`接口计算性能
 5. 调用查询接口获取计算结果
 
 ## 注意事项
 
 1. 确保MySQL数据库服务正在运行
 2. 确保数据库结构已经创建
-3. 首次运行前，需要配置`config.json`中的数据库连接信息
+3. 首次运行前，需要配置 `config.json`中的数据库连接信息
 4. 可以通过API接口逐个小时处理数据，模拟传感器数据的实时采集
 5. 系统使用非线性回归算法预测传热系数，需要足够的训练数据
 

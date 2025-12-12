@@ -24,10 +24,5 @@
             "password": "123456",
             "database": "heat_exchanger_monitor_db"
         }
-    },
-    "geometry_params": {
-        "d_i_original": 0.02,
-        "d_o": 0.025,
-        "lambda_t": 45.0
     }
 }
