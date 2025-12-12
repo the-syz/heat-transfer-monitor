@@ -66,7 +66,9 @@ class MainCalculator:
             return False
         
         # 处理运行数据，计算物理参数
-        processed_data = self.data_loader.process_operation_data(operation_data, physical_data)
+        heat_exchangers = self.data_loader.get_all_heat_exchangers()
+        heat_exchanger = heat_exchangers[0] if heat_exchangers else None
+        processed_data = self.data_loader.process_operation_data(operation_data, physical_data, heat_exchanger)
         
         # 将运行参数插入到生产数据库
         if not self.data_loader.insert_operation_parameters(operation_data):
