@@ -175,7 +175,7 @@ class DataLoader:
         except Exception:
             return 0
     
-    def process_operation_data(self, operation_data, physical_data):
+    def process_operation_data(self, operation_data, physical_data, heat_exchanger=None):
         """处理运行数据，计算物理参数"""
         processed_data = []
         
@@ -184,6 +184,9 @@ class DataLoader:
         for p_data in physical_data:
             key = (p_data['points'], p_data['side'])
             physical_map[key] = p_data
+        
+        # 获取管径，默认0.02m
+        d_i = heat_exchanger.get('d_i_original', 0.02) if heat_exchanger else 0.02
         
         for op_data in operation_data:
             # 获取温度，用于计算水的物性参数
@@ -200,7 +203,7 @@ class DataLoader:
             Re = self.calculate_reynolds_number(
                 water_props['rho'], 
                 op_data.get('velocity', 0), 
-                0.02,  # 管径，默认0.02m
+                d_i,  # 使用数据库中的管径或默认值
                 water_props['mu']
             )
             

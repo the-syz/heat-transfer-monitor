@@ -18,13 +18,31 @@ class MainCalculator:
         # 初始化数据加载器
         self.data_loader = DataLoader(self.db_conn)
         
-        # 初始化计算器
-        self.lmtd_calc = LMTDCalculator()
-        self.nonlinear_calc = NonlinearRegressionCalculator(self.config['geometry_params'])
-        
         # 连接数据库
         self.db_conn.connect_test_db()
         self.db_conn.connect_prod_db()
+        
+        # 获取换热器信息
+        heat_exchangers = self.data_loader.get_all_heat_exchangers()
+        if heat_exchangers:
+            # 假设使用第一个换热器的参数
+            heat_exchanger = heat_exchangers[0]
+            self.geometry_params = {
+                'd_i_original': heat_exchanger['d_i_original'],
+                'd_o': heat_exchanger['d_o'],
+                'lambda_t': heat_exchanger['lambda_t']
+            }
+        else:
+            # 如果没有数据，使用默认值
+            self.geometry_params = {
+                'd_i_original': 0.02,
+                'd_o': 0.025,
+                'lambda_t': 45.0
+            }
+        
+        # 初始化计算器
+        self.lmtd_calc = LMTDCalculator()
+        self.nonlinear_calc = NonlinearRegressionCalculator(self.geometry_params)
     
     def load_config(self):
         """加载配置文件"""
