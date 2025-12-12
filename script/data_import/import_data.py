@@ -311,6 +311,167 @@ async def import_model_params(file_path):
         "inserted_counts": inserted_counts
     }
 
+# 导入data目录下的operation_parameters.csv文件
+async def import_operation_parameters_file(file_path):
+    """导入operation_parameters.csv文件数据
+    
+    Args:
+        file_path (str): 文件路径
+        
+    Returns:
+        dict: 导入结果统计
+    """
+    print(f"开始导入文件: {file_path}")
+    
+    # 读取CSV文件
+    df = read_csv_file(file_path)
+    if df is None:
+        return {"file": file_path, "success": False, "message": "读取文件失败"}
+    
+    # 初始化数据列表
+    operation_data = []
+    
+    # 处理每行数据
+    for _, row in df.iterrows():
+        # 获取day和hour
+        day = row.get('day', 0)
+        hour = row.get('hour', 0)
+        
+        # 转换为时间戳
+        timestamp = convert_to_timestamp(day, hour)
+        
+        # 处理points
+        points_str = row.get('points', '')
+        # 提取数字部分作为points值
+        try:
+            # 移除非数字字符，只保留数字和小数点
+            points_num = ''.join(c for c in points_str if c.isdigit() or c == '.')
+            points = int(float(points_num))
+        except ValueError:
+            continue
+        
+        # 获取side
+        side = row.get('side', 'tube')
+        
+        # 换热器编号，默认为1
+        heat_exchanger_id = 1
+        
+        # 处理NaN值，转换为None
+        def safe_value(value):
+            if isinstance(value, float) and pd.isna(value):
+                return None
+            return value
+        
+        # 创建运行参数数据
+        operation_param = OperationParameter(
+            heat_exchanger_id=heat_exchanger_id,
+            timestamp=timestamp,
+            points=points,
+            side=side,
+            temperature=safe_value(row.get('temperature')),
+            pressure=safe_value(row.get('pressure')),
+            # 映射合适的速度字段
+            velocity=safe_value(row.get('avg_velocity') or row.get('crossflow_velocity') or row.get('Longitudina_velocity') or row.get('max_velocity'))
+        )
+        operation_data.append(operation_param)
+    
+    # 批量插入数据
+    inserted_counts = {}
+    
+    if operation_data:
+        inserted_counts['operation_parameters'] = await batch_insert(OperationParameter, operation_data, IMPORT_CONFIG['batch_size'])
+    
+    print(f"文件 {file_path} 导入完成")
+    print(f"导入数据统计: {inserted_counts}")
+    
+    return {
+        "file": file_path,
+        "success": True,
+        "inserted_counts": inserted_counts
+    }
+
+# 导入data目录下的performance_parameters.csv文件
+async def import_performance_parameters_file(file_path):
+    """导入performance_parameters.csv文件数据
+    
+    Args:
+        file_path (str): 文件路径
+        
+    Returns:
+        dict: 导入结果统计
+    """
+    print(f"开始导入文件: {file_path}")
+    
+    # 读取CSV文件
+    df = read_csv_file(file_path)
+    if df is None:
+        return {"file": file_path, "success": False, "message": "读取文件失败"}
+    
+    # 初始化数据列表
+    performance_data = []
+    
+    # 处理每行数据
+    for _, row in df.iterrows():
+        # 获取day和hour
+        day = row.get('day', 0)
+        hour = row.get('hour', 0)
+        
+        # 转换为时间戳
+        timestamp = convert_to_timestamp(day, hour)
+        
+        # 处理points
+        points_str = row.get('points', '')
+        # 提取数字部分作为points值
+        try:
+            # 移除非数字字符，只保留数字和小数点
+            points_num = ''.join(c for c in points_str if c.isdigit() or c == '.')
+            points = int(float(points_num))
+        except ValueError:
+            continue
+        
+        # 获取side
+        side = row.get('side', 'tube')
+        
+        # 换热器编号，默认为1
+        heat_exchanger_id = 1
+        
+        # 处理NaN值，转换为None
+        def safe_value(value):
+            if isinstance(value, float) and pd.isna(value):
+                return None
+            return value
+        
+        # 创建性能参数数据
+        performance_param = PerformanceParameter(
+            heat_exchanger_id=heat_exchanger_id,
+            timestamp=timestamp,
+            points=points,
+            side=side,
+            # 根据文件内容映射合适的K值字段
+            K=safe_value(row.get('K') or row.get('K_actual') or row.get('overall_u')),
+            alpha_i=safe_value(row.get('alpha_i') or row.get('tubeside_h')),
+            alpha_o=safe_value(row.get('alpha_o') or row.get('shellside_h')),
+            heat_duty=safe_value(row.get('heat_duty')),
+            effectiveness=safe_value(row.get('effectiveness')),
+            lmtd=safe_value(row.get('lmtd') or row.get('LMTD'))
+        )
+        performance_data.append(performance_param)
+    
+    # 批量插入数据
+    inserted_counts = {}
+    
+    if performance_data:
+        inserted_counts['performance_parameters'] = await batch_insert(PerformanceParameter, performance_data, IMPORT_CONFIG['batch_size'])
+    
+    print(f"文件 {file_path} 导入完成")
+    print(f"导入数据统计: {inserted_counts}")
+    
+    return {
+        "file": file_path,
+        "success": True,
+        "inserted_counts": inserted_counts
+    }
+
 # 主导入函数
 async def main():
     """主导入函数"""
@@ -384,7 +545,15 @@ async def main():
             print(f"\n找到 {len(operation_files)} 个operation_parameters文件")
             print(f"找到 {len(performance_files)} 个performance_parameters文件")
             
-            # TODO: 实现这两种文件的导入逻辑
+            # 导入运行参数文件
+            for file_path in operation_files:
+                result = await import_operation_parameters_file(file_path)
+                total_results.append(result)
+            
+            # 导入性能参数文件
+            for file_path in performance_files:
+                result = await import_performance_parameters_file(file_path)
+                total_results.append(result)
         
         # 打印导入结果汇总
         print("\n=== 导入结果汇总 ===")

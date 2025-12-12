@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+mysql-connector-python
+pandas
+numpy
+pyfluids
+scipy
+python-dotenv
+pydantic

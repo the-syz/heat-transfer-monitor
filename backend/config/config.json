@@ -1,0 +1,33 @@
+{
+    "data_directory": "./data",
+    "result_directory": "./result",
+    "training_days": 20,
+    "max_days": 800,
+    "history_days": 3,
+    "optimization_hours": 3,
+    "stage1_error_threshold": 5,
+    "stage1_history_days": 5,
+    "algorithms": ["wilsonOld", "nonlinear"],
+    "selected_algorithm": "nonlinear",
+    "database": {
+        "test_db": {
+            "host": "localhost",
+            "port": 3306,
+            "user": "root",
+            "password": "123456",
+            "database": "heat_exchanger_monitor_db_test"
+        },
+        "prod_db": {
+            "host": "localhost",
+            "port": 3306,
+            "user": "root",
+            "password": "123456",
+            "database": "heat_exchanger_monitor_db"
+        }
+    },
+    "geometry_params": {
+        "d_i_original": 0.02,
+        "d_o": 0.025,
+        "lambda_t": 45.0
+    }
+}

@@ -104,3 +104,19 @@ class KPrediction(Model):
     class Meta:
         table = "k_predictions"
         unique_together = ("heat_exchanger", "timestamp", "points", "side")
+
+# 新增：总传热系数管理表
+class KManagement(Model):
+    """总传热系数管理表，包含LMTD法计算的K、K预测值、K实际值"""
+    id = fields.IntField(pk=True, description="主键")
+    heat_exchanger = fields.ForeignKeyField("models.HeatExchanger", related_name="k_management", description="外键，连接换热器表")
+    timestamp = fields.DatetimeField(description="时间戳")
+    points = fields.IntField(description="测量点（整型）")
+    side = fields.CharEnumField(SideEnum, description="侧标识")
+    K_LMTD = fields.FloatField(description="LMTD法计算的总传热系数 (W/(m²·K))", null=True)
+    K_predicted = fields.FloatField(description="预测总传热系数 (W/(m²·K))", null=True)
+    K_actual = fields.FloatField(description="实际总传热系数 (W/(m²·K))", null=True)
+
+    class Meta:
+        table = "k_management"
+        unique_together = ("heat_exchanger", "timestamp", "points", "side")
