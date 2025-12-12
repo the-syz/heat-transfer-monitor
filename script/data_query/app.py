@@ -162,8 +162,11 @@ def results_to_dataframes(results):
     for key, data in results.items():
         if data:
             df = pd.DataFrame(data)
-            # 按points和timestamp排序
-            df = df.sort_values(by=["points", "timestamp"])
+            # 按points和timestamp排序，但只在有points字段时才包含它
+            if "points" in df.columns:
+                df = df.sort_values(by=["points", "timestamp"])
+            else:
+                df = df.sort_values(by=["timestamp"])
             dataframes[key] = df
         else:
             dataframes[key] = pd.DataFrame()
