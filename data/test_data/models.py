@@ -30,10 +30,10 @@ class OperationParameter(Model):
     timestamp = fields.DatetimeField(description="时间戳")
     points = fields.IntField(description="测量点（整型）")
     side = fields.CharEnumField(SideEnum, description="侧标识")
-    temperature = fields.FloatField(description="温度 (°C)")
-    pressure = fields.FloatField(description="压力 (Pa)")
-    flow_rate = fields.FloatField(description="流量 (m³/s)")
-    velocity = fields.FloatField(description="流速 (m/s)")
+    temperature = fields.FloatField(description="温度 (°C)", null=True)
+    pressure = fields.FloatField(description="压力 (Pa)", null=True)
+    flow_rate = fields.FloatField(description="流量 (m³/s)", null=True)
+    velocity = fields.FloatField(description="流速 (m/s)", null=True)
 
     class Meta:
         table = "operation_parameters"
@@ -47,12 +47,12 @@ class PhysicalParameter(Model):
     timestamp = fields.DatetimeField(description="时间戳")
     points = fields.IntField(description="测量点（整型）")
     side = fields.CharEnumField(SideEnum, description="侧标识")
-    density = fields.FloatField(description="密度 (kg/m³)")
-    viscosity = fields.FloatField(description="动力粘度 (Pa·s)")
-    thermal_conductivity = fields.FloatField(description="导热系数 (W/(m·K))")
-    specific_heat = fields.FloatField(description="比热容 (J/(kg·K))")
-    reynolds = fields.FloatField(description="雷诺数")
-    prandtl = fields.FloatField(description="普朗特数")
+    density = fields.FloatField(description="密度 (kg/m³)", null=True)
+    viscosity = fields.FloatField(description="动力粘度 (Pa·s)", null=True)
+    thermal_conductivity = fields.FloatField(description="导热系数 (W/(m·K))", null=True)
+    specific_heat = fields.FloatField(description="比热容 (J/(kg·K))", null=True)
+    reynolds = fields.FloatField(description="雷诺数", null=True)
+    prandtl = fields.FloatField(description="普朗特数", null=True)
 
     class Meta:
         table = "physical_parameters"
@@ -66,12 +66,12 @@ class PerformanceParameter(Model):
     timestamp = fields.DatetimeField(description="时间戳")
     points = fields.IntField(description="测量点（整型）")
     side = fields.CharEnumField(SideEnum, description="侧标识")
-    K = fields.FloatField(description="总传热系数 (W/(m²·K))")
-    alpha_i = fields.FloatField(description="管侧传热系数 (W/(m²·K))")
-    alpha_o = fields.FloatField(description="壳侧传热系数 (W/(m²·K))")
-    heat_duty = fields.FloatField(description="热负荷 (W)")
-    effectiveness = fields.FloatField(description="有效度")
-    lmtd = fields.FloatField(description="对数平均温差 (°C)")
+    K = fields.FloatField(description="总传热系数 (W/(m²·K))", null=True)
+    alpha_i = fields.FloatField(description="管侧传热系数 (W/(m²·K))", null=True)
+    alpha_o = fields.FloatField(description="壳侧传热系数 (W/(m²·K))", null=True)
+    heat_duty = fields.FloatField(description="热负荷 (W)", null=True)
+    effectiveness = fields.FloatField(description="有效度", null=True)
+    lmtd = fields.FloatField(description="对数平均温差 (°C)", null=True)
 
     class Meta:
         table = "performance_parameters"
@@ -83,9 +83,9 @@ class ModelParameter(Model):
     id = fields.IntField(pk=True, description="主键")
     heat_exchanger = fields.ForeignKeyField("models.HeatExchanger", related_name="model_parameters", description="外键，连接换热器表")
     timestamp = fields.DatetimeField(description="时间戳，每天三点更新一次")
-    a = fields.FloatField(description="模型参数a")
-    p = fields.FloatField(description="模型参数p")
-    b = fields.FloatField(description="模型参数b")
+    a = fields.FloatField(description="模型参数a", null=True)
+    p = fields.FloatField(description="模型参数p", null=True)
+    b = fields.FloatField(description="模型参数b", null=True)
 
     class Meta:
         table = "model_parameters"
@@ -99,7 +99,7 @@ class KPrediction(Model):
     timestamp = fields.DatetimeField(description="时间戳")
     points = fields.IntField(description="测量点（整型）")
     side = fields.CharEnumField(SideEnum, description="侧标识")
-    K_predicted = fields.FloatField(description="预测总传热系数 (W/(m²·K))")
+    K_predicted = fields.FloatField(description="预测总传热系数 (W/(m²·K))", null=True)
 
     class Meta:
         table = "k_predictions"

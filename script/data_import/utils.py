@@ -106,7 +106,8 @@ async def batch_insert(model_class, data_list, batch_size=1000):
     inserted_count = 0
     for i in range(0, len(data_list), batch_size):
         batch = data_list[i:i+batch_size]
-        await model_class.bulk_create(batch)
+        # 添加ignore_conflicts=True来忽略重复记录
+        await model_class.bulk_create(batch, ignore_conflicts=True)
         inserted_count += len(batch)
     
     return inserted_count

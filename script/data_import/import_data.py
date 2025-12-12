@@ -2,11 +2,12 @@ import sys
 import os
 from datetime import datetime
 import asyncio
+import pandas as pd
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from data.models import (
+from data.test_data.models import (
     OperationParameter,
     PhysicalParameter,
     PerformanceParameter,
@@ -164,7 +165,7 @@ async def import_cache_full_data(file_path):
         "inserted_counts": inserted_counts
     }
 
-# 导入result_all_data_in_1/two_stage_linear/heat_transfer_coefficients/day_X_heat_transfer.csv文件
+# 导入result_all_data_in_1下的heat_transfer.csv文件
 async def import_heat_transfer_data(file_path):
     """导入heat_transfer.csv文件数据
     
@@ -195,10 +196,19 @@ async def import_heat_transfer_data(file_path):
         timestamp = convert_to_timestamp(day, hour)
         
         # 处理points和side
-        points_str = row.get('points', '')
-        points, side = process_points(str(points_str))
-        if points is None:
-            continue
+        # 从position或points字段获取
+        points = row.get('position', row.get('points', ''))
+        # 如果是字符串，尝试转换为整数
+        if isinstance(points, str):
+            try:
+                points = int(float(points))
+            except ValueError:
+                continue
+        elif isinstance(points, float):
+            points = int(points)
+        
+        # 默认为管侧
+        side = 'tube'
         
         # 换热器编号，默认为1
         heat_exchanger_id = 1
@@ -325,17 +335,36 @@ async def main():
             result = await import_cache_full_data(file_path)
             total_results.append(result)
         
-        # 2. 导入heat_transfer.csv文件
+        # 2. 导入two_stage_linear下的heat_transfer.csv文件
         heat_transfer_dir = os.path.join(DATA_SOURCE_PATHS['result_all_data_in_1'], 'two_stage_linear', 'heat_transfer_coefficients')
         if os.path.exists(heat_transfer_dir):
             heat_transfer_files = get_all_csv_files(heat_transfer_dir)
-            print(f"\n找到 {len(heat_transfer_files)} 个heat_transfer文件")
+            print(f"\n找到 {len(heat_transfer_files)} 个two_stage_linear heat_transfer文件")
             
             for file_path in heat_transfer_files:
                 result = await import_heat_transfer_data(file_path)
                 total_results.append(result)
         
-        # 3. 导入模型参数文件
+        # 3. 导入nonlinear_regression下的heat_transfer.csv文件（K预测值）
+        nonlinear_regression_dir = os.path.join(DATA_SOURCE_PATHS['result'], 'nonlinear_regression')
+        if os.path.exists(nonlinear_regression_dir):
+            # 获取所有points_TX.0文件夹
+            points_dirs = [d for d in os.listdir(nonlinear_regression_dir) if os.path.isdir(os.path.join(nonlinear_regression_dir, d)) and d.startswith('points_T')]
+            print(f"\n找到 {len(points_dirs)} 个points文件夹")
+            
+            for points_dir in points_dirs:
+                points_path = os.path.join(nonlinear_regression_dir, points_dir)
+                heat_transfer_coeff_dir = os.path.join(points_path, 'heat_transfer_coefficients')
+                
+                if os.path.exists(heat_transfer_coeff_dir):
+                    heat_transfer_files = get_all_csv_files(heat_transfer_coeff_dir)
+                    print(f"\n在 {points_dir} 中找到 {len(heat_transfer_files)} 个heat_transfer文件")
+                    
+                    for file_path in heat_transfer_files:
+                        result = await import_heat_transfer_data(file_path)
+                        total_results.append(result)
+        
+        # 4. 导入模型参数文件
         model_params_dir = os.path.join(DATA_SOURCE_PATHS['result_all_data_in_1'], 'nonlinear_regression', 'daily_parameters')
         if os.path.exists(model_params_dir):
             model_param_files = get_all_csv_files(model_params_dir)
@@ -345,7 +374,7 @@ async def main():
                 result = await import_model_params(file_path)
                 total_results.append(result)
         
-        # 4. 导入data目录下的operation_parameters.csv和performance_parameters.csv文件
+        # 5. 导入data目录下的operation_parameters.csv和performance_parameters.csv文件
         data_dir = DATA_SOURCE_PATHS['data']
         if os.path.exists(data_dir):
             data_files = get_all_csv_files(data_dir)

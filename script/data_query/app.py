@@ -9,7 +9,7 @@ import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 # 数据库模型
-from data.models import (
+from data.test_data.models import (
     HeatExchanger,
     OperationParameter,
     PhysicalParameter,
@@ -20,8 +20,8 @@ from data.models import (
 
 # 数据库连接配置
 DB_CONFIG = {
-    'url': 'mysql://heatexMCP:123123@localhost:3306/heat_exchanger_monitor_db',
-    'modules': {'models': ['data.models']}
+    'url': 'mysql://heatexMCP:123123@localhost:3306/heat_exchanger_monitor_db_test',
+    'modules': {'models': ['data.test_data.models']}
 }
 
 # 初始化数据库连接
@@ -58,7 +58,7 @@ async def query_data(heat_exchanger_id, side, selected_date, selected_time):
     
     # 查询运行参数
     operation_params = await OperationParameter.filter(
-        heat_exchanger_id=heat_exchanger_id,
+        heat_exchanger__id=heat_exchanger_id,
         side=side,
         timestamp__range=(start_time, end_time)
     ).all()
@@ -75,7 +75,7 @@ async def query_data(heat_exchanger_id, side, selected_date, selected_time):
     
     # 查询物性参数
     physical_params = await PhysicalParameter.filter(
-        heat_exchanger_id=heat_exchanger_id,
+        heat_exchanger__id=heat_exchanger_id,
         side=side,
         timestamp__range=(start_time, end_time)
     ).all()
@@ -94,7 +94,7 @@ async def query_data(heat_exchanger_id, side, selected_date, selected_time):
     
     # 查询性能参数
     performance_params = await PerformanceParameter.filter(
-        heat_exchanger_id=heat_exchanger_id,
+        heat_exchanger__id=heat_exchanger_id,
         side=side,
         timestamp__range=(start_time, end_time)
     ).all()
@@ -113,7 +113,7 @@ async def query_data(heat_exchanger_id, side, selected_date, selected_time):
     
     # 查询K预测值
     k_predictions = await KPrediction.filter(
-        heat_exchanger_id=heat_exchanger_id,
+        heat_exchanger__id=heat_exchanger_id,
         side=side,
         timestamp__range=(start_time, end_time)
     ).all()
@@ -127,9 +127,14 @@ async def query_data(heat_exchanger_id, side, selected_date, selected_time):
     
     # 查询模型参数
     # 模型参数每天更新一次，查询当天的数据
+    # Tortoise ORM不支持timestamp__date，需要使用日期范围查询
+    start_of_day = datetime.combine(selected_date, datetime.min.time())
+    end_of_day = datetime.combine(selected_date, datetime.max.time())
+    
     model_params = await ModelParameter.filter(
-        heat_exchanger_id=heat_exchanger_id,
-        timestamp__date=selected_date
+        heat_exchanger__id=heat_exchanger_id,
+        timestamp__gte=start_of_day,
+        timestamp__lte=end_of_day
     ).all()
     
     for mp in model_params:
@@ -241,10 +246,11 @@ def main():
         max_value=datetime(2024, 12, 31)
     )
     
-    # 选择时间
+    # 选择时间 - 设置为1小时间隔
     selected_time = st.sidebar.time_input(
         "选择时间",
-        value=datetime(2022, 1, 1, 0, 0).time()
+        value=datetime(2022, 1, 1, 0, 0).time(),
+        step=3600  # 1小时 = 3600秒
     )
     
     # 查询按钮
@@ -330,4 +336,9 @@ def main():
         - 物性参数: 密度、粘度、导热系数、比热容、雷诺数、普朗特数等
         - 性能参数: 总传热系数K、管侧传热系数alpha_i、壳侧传热系数alpha_o、热负荷、有效度、对数平均温差等
         - K预测值: 预测的总传热系数
-        - 
+        - 模型参数: 模型参数a、p、b
+        """)
+
+# 运行应用
+if __name__ == "__main__":
+    main()

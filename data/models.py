@@ -90,3 +90,17 @@ class ModelParameter(Model):
     class Meta:
         table = "model_parameters"
         unique_together = ("heat_exchanger", "timestamp")
+
+# 新增：K_prediction表，存储各测点的K_predicted值
+class KPrediction(Model):
+    """K预测值表，存储各测点的K_predicted值"""
+    id = fields.IntField(pk=True, description="主键")
+    heat_exchanger = fields.ForeignKeyField("models.HeatExchanger", related_name="k_predictions", description="外键，连接换热器表")
+    timestamp = fields.DatetimeField(description="时间戳")
+    points = fields.IntField(description="测量点（整型）")
+    side = fields.CharEnumField(SideEnum, description="侧标识")
+    K_predicted = fields.FloatField(description="预测总传热系数 (W/(m²·K))")
+
+    class Meta:
+        table = "k_predictions"
+        unique_together = ("heat_exchanger", "timestamp", "points", "side")
