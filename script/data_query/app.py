@@ -258,10 +258,14 @@ def main():
     
     # 查询结果显示
     if query_button:
+        # 计算距离2022-01-01的天数
+        base_date = datetime(2022, 1, 1).date()
+        days_diff = (selected_date - base_date).days
+        
         st.markdown(f"### 查询结果")
         st.markdown(f"**换热器**: {heat_exchanger_options[selected_he_id]}")
         st.markdown(f"**侧标识**: {'管侧' if side == 'tube' else '壳侧'}")
-        st.markdown(f"**日期**: {selected_date.strftime('%Y-%m-%d')}")
+        st.markdown(f"**日期**: {selected_date.strftime('%Y-%m-%d')} (距离2022-01-01的第 {days_diff} 天)")
         st.markdown(f"**时间**: {selected_time.strftime('%H:%M:%S')}")
         st.markdown("---")
         
