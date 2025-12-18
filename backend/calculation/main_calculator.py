@@ -259,6 +259,11 @@ class MainCalculator:
             T_c_out = temp_data.get(cold_side, {}).get(2, 0) or 0
             
             # 计算LMTD
+            # 确保所有温度值都不是None
+            T_h_in = T_h_in or 0
+            T_h_out = T_h_out or 0
+            T_c_in = T_c_in or 0
+            T_c_out = T_c_out or 0
             if T_h_in > 0 and T_h_out > 0 and T_c_in > 0 and T_c_out > 0:
                 lmtd = self.lmtd_calc.calculate_lmtd(
                     T_h_in, T_h_out, T_c_in, T_c_out, flow_type='counterflow'
@@ -283,7 +288,11 @@ class MainCalculator:
             heat_exchanger_area = self.get_heat_exchanger_area()
             
             # 计算K_lmtd
-            k_lmtd = 0
+            k_lmtd =# 计算K_lmtd
+            # 确保所有值都不是None
+            Q = Q or 0
+            lmtd = lmtd or 0
+            heat_exchanger_area = heat_exchanger_area or 0
             if Q > 0 and lmtd > 0 and heat_exchanger_area > 0:
                 k_lmtd = self.lmtd_calc.calculate_k_lmtd(Q, heat_exchanger_area, lmtd)
             
@@ -474,9 +483,9 @@ class MainCalculator:
             reynolds = record.get('reynolds_number')
             if reynolds is None or reynolds <= 0:
                 d_i = self.geometry_params['d_i_original']
-                rho = record.get('density', 1000)
-                u = record.get('velocity', 0)
-                mu = record.get('viscosity', 0.001)
+                rho = record.get('density', 1000) or 0
+                u = record.get('velocity', 0) or 0
+                mu = record.get('viscosity', 0.001) or 0
                 
                 if u > 0 and mu > 0:
                     Re = rho * u * d_i / mu
