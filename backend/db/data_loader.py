@@ -286,3 +286,141 @@ class DataLoader:
             return self.db_conn.fetch_all(self.db_conn.prod_cursor)
         return []
     
+    def get_training_data_for_stage1(self, training_days):
+        """获取阶段1训练数据"""
+        # 计算时间范围
+        start_date = f"2022-01-01 00:00:00"
+        end_date = f"2022-01-{training_days} 23:59:59"
+        
+        query = """
+        SELECT p.*, k.K_actual
+        FROM physical_parameters p
+        JOIN k_management k ON p.heat_exchanger_id = k.heat_exchanger_id 
+                           AND p.timestamp = k.timestamp 
+                           AND p.points = k.points 
+                           AND p.side = k.side
+        WHERE p.timestamp BETWEEN %s AND %s
+        """
+        params = (start_date, end_date)
+        
+        if self.db_conn.execute_query(self.db_conn.prod_cursor, query, params):
+            return self.db_conn.fetch_all(self.db_conn.prod_cursor)
+        return []
+    
+    def insert_model_parameters(self, model_params, stage):
+        """将模型参数插入到model_parameters表"""
+        # 获取当前时间
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # 构建数据
+        data = {
+            'timestamp': current_time,
+            'a': model_params['a'],
+            'p': model_params['p'],
+            'b': model_params['b'],
+            'stage': stage
+        }
+        
+        # 构建插入语句
+        columns = ', '.join(data.keys())
+        placeholders = ', '.join(['%s'] * len(data))
+        query = f"INSERT INTO model_parameters ({columns}) VALUES ({placeholders})"
+        
+        try:
+            # 插入到生产数据库
+            self.db_conn.prod_cursor.execute(query, tuple(data.values()))
+            self.db_conn.commit(self.db_conn.prod_db)
+            return True
+        except Exception as e:
+            print(f"插入模型参数失败: {e}")
+            self.db_conn.rollback(self.db_conn.prod_db)
+            return False
+    
+    def get_test_performance_parameters_by_hour(self, day, hour):
+        """根据天数和小时从测试数据库读取性能参数"""
+        # 计算时间范围
+        start_date = f"2022-01-{day} {hour}:00:00"
+        end_date = f"2022-01-{day} {hour}:59:59"
+        
+        query = """
+        SELECT * FROM performance_parameters 
+        WHERE timestamp BETWEEN %s AND %s
+        """
+        params = (start_date, end_date)
+        
+        if self.db_conn.execute_query(self.db_conn.test_cursor, query, params):
+            return self.db_conn.fetch_all(self.db_conn.test_cursor)
+        return []
+    
+    def update_k_management_with_predicted(self, data):
+        """更新k_management表的K_predicted字段"""
+        if not data:
+            return True
+        
+        # 构建更新语句
+        query = """
+        UPDATE k_management 
+        SET K_predicted = %s 
+        WHERE heat_exchanger_id = %s AND timestamp = %s AND points = %s AND side = %s
+        """
+        
+        # 准备数据
+        values = []
+        for record in data:
+            values.append((
+                record.get('K_predicted', 0),
+                record['heat_exchanger_id'],
+                record['timestamp'],
+                record['points'],
+                record['side']
+            ))
+        
+        try:
+            # 批量更新
+            self.db_conn.prod_cursor.executemany(query, values)
+            self.db_conn.commit(self.db_conn.prod_db)
+            return True
+        except Exception as e:
+            print(f"更新k_management失败: {e}")
+            self.db_conn.rollback(self.db_conn.prod_db)
+            return False
+    
+    def get_new_data_count_for_stage2(self, day, optimization_hours):
+        """获取新一天的数据数量，用于判断是否进入阶段2优化"""
+        # 计算时间范围
+        start_date = f"2022-01-{day} 00:00:00"
+        end_date = f"2022-01-{day} {optimization_hours-1}:59:59"
+        
+        query = """
+        SELECT COUNT(*) as count
+        FROM physical_parameters
+        WHERE timestamp BETWEEN %s AND %s
+        """
+        params = (start_date, end_date)
+        
+        if self.db_conn.execute_query(self.db_conn.prod_cursor, query, params):
+            result = self.db_conn.fetch_one(self.db_conn.prod_cursor)
+            return result['count'] if result else 0
+        return 0
+    
+    def get_optimization_data_for_stage2(self, day, optimization_hours):
+        """获取阶段2优化数据"""
+        # 计算时间范围
+        start_date = f"2022-01-{day} 00:00:00"
+        end_date = f"2022-01-{day} {optimization_hours-1}:59:59"
+        
+        query = """
+        SELECT p.*, k.K_actual
+        FROM physical_parameters p
+        JOIN k_management k ON p.heat_exchanger_id = k.heat_exchanger_id 
+                           AND p.timestamp = k.timestamp 
+                           AND p.points = k.points 
+                           AND p.side = k.side
+        WHERE p.timestamp BETWEEN %s AND %s
+        """
+        params = (start_date, end_date)
+        
+        if self.db_conn.execute_query(self.db_conn.prod_cursor, query, params):
+            return self.db_conn.fetch_all(self.db_conn.prod_cursor)
+        return []
+    
