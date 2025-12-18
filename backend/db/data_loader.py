@@ -266,8 +266,6 @@ class DataLoader:
             processed = {
                 'points': op_data['points'],
                 'side': op_data['side'],
-                'day': op_data['day'],
-                'hour': op_data['hour'],
                 'timestamp': op_data['timestamp'],
                 'density': water_props['rho'],
                 'dynamic_viscosity': water_props['mu'],
