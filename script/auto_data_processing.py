@@ -10,6 +10,7 @@ import datetime
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from backend.db.db_connection import DatabaseConnection
+from backend.db.data_loader import DataLoader
 from backend.calculation.main_calculator import MainCalculator
 
 # 配置日志记录
@@ -61,6 +62,8 @@ class DatabaseHandler:
         self.config = config
         self.db_conn = DatabaseConnection(self.config.config_file)
         self.connect_databases()
+        # 初始化DataLoader
+        self.data_loader = DataLoader(self.db_conn)
     
     def connect_databases(self):
         """连接数据库"""
@@ -84,13 +87,13 @@ class DatabaseHandler:
         """获取指定天数和小时的数据"""
         try:
             # 从测试数据库读取运行参数
-            operation_data = self.db_conn.data_loader.get_operation_parameters_by_hour(day, hour)
+            operation_data = self.data_loader.get_operation_parameters_by_hour(day, hour)
             
             # 从测试数据库读取物理参数
-            physical_data = self.db_conn.data_loader.get_physical_parameters_by_hour(day, hour)
+            physical_data = self.data_loader.get_physical_parameters_by_hour(day, hour)
             
             # 从测试数据库读取性能参数
-            performance_data = self.db_conn.data_loader.get_performance_parameters_by_hour(day, hour)
+            performance_data = self.data_loader.get_performance_parameters_by_hour(day, hour)
             
             logger.info(f"成功获取第{day}天第{hour}小时的数据")
             return operation_data, physical_data, performance_data
@@ -241,9 +244,11 @@ class AutoProcessor:
                         )
             
             # 更新当前时间
+            current_day = self.current_day
+            current_hour = self.current_hour
             self.update_current_time()
             
-            logger.info(f"=== 处理周期完成: 第{self.current_day-1}天第{self.current_hour-1 if self.current_hour > 0 else 23}小时 ===")
+            logger.info(f"=== 处理周期完成: 第{current_day}天第{current_hour}小时 ===")
             return True
             
         except Exception as e:
