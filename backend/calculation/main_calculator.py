@@ -253,6 +253,15 @@ class MainCalculator:
                 'K': 2000.0,
                 'heat_exchanger_id': 1
             }]
+        else:
+            # 确保所有性能参数都有alpha_i、alpha_o和K字段
+            for data in performance_data:
+                if 'alpha_i' not in data or data['alpha_i'] is None:
+                    data['alpha_i'] = 5000.0
+                if 'alpha_o' not in data or data['alpha_o'] is None:
+                    data['alpha_o'] = 3000.0
+                if 'K' not in data or data['K'] is None:
+                    data['K'] = 2000.0
         
         # 处理运行数据，计算物理参数
         processed_data = self.data_loader.process_operation_data(operation_data, physical_data, self.heat_exchanger)
