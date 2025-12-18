@@ -251,12 +251,12 @@ class MainCalculator:
         lmtd_map = {}
         for timestamp, temp_data in temp_map.items():
             # 获取热侧温度（假设points=1为入口，points=2为出口）
-            T_h_in = temp_data.get(hot_side, {}).get(1, 0)
-            T_h_out = temp_data.get(hot_side, {}).get(2, 0)
+            T_h_in = temp_data.get(hot_side, {}).get(1, 0) or 0
+            T_h_out = temp_data.get(hot_side, {}).get(2, 0) or 0
             
             # 获取冷侧温度
-            T_c_in = temp_data.get(cold_side, {}).get(1, 0)
-            T_c_out = temp_data.get(cold_side, {}).get(2, 0)
+            T_c_in = temp_data.get(cold_side, {}).get(1, 0) or 0
+            T_c_out = temp_data.get(cold_side, {}).get(2, 0) or 0
             
             # 计算LMTD
             if T_h_in > 0 and T_h_out > 0 and T_c_in > 0 and T_c_out > 0:
@@ -470,8 +470,9 @@ class MainCalculator:
             p = model_params['p']
             b = model_params['b']
             
-            # 计算雷诺数Re（如果record中没有）
-            if 'reynolds_number' not in record or record['reynolds_number'] <= 0:
+            # 计算雷诺数Re（如果record中没有或无效）
+            reynolds = record.get('reynolds_number')
+            if reynolds is None or reynolds <= 0:
                 d_i = self.geometry_params['d_i_original']
                 rho = record.get('density', 1000)
                 u = record.get('velocity', 0)
@@ -482,7 +483,7 @@ class MainCalculator:
                 else:
                     Re = 10000  # 默认值
             else:
-                Re = record['reynolds_number']
+                Re = reynolds
             
             # 预测K值
             K_pred = self.nonlinear_calc.predict_K(Re, a, p, b)
