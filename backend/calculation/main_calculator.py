@@ -124,45 +124,7 @@ class MainCalculator:
         operation_data = self.data_loader.get_operation_parameters_by_hour(day, hour)
         if not operation_data:
             print(f"第{day}天第{hour}小时没有运行参数数据")
-            # 模拟生成一些测试数据
-            # 注意：这里只是为了测试接口，实际应用中应该从数据库读取数据
-            operation_data = [{
-                'points': 1,
-                'side': 'TUBE',
-                'timestamp': f"2022-01-{day} {hour}:00:00",
-                'temperature': 80,
-                'flow_rate': 1.0,
-                'pressure': 1.0,
-                'velocity': 1.0,
-                'heat_exchanger_id': 1
-            }, {
-                'points': 2,
-                'side': 'TUBE',
-                'timestamp': f"2022-01-{day} {hour}:00:00",
-                'temperature': 60,
-                'flow_rate': 1.0,
-                'pressure': 1.0,
-                'velocity': 1.0,
-                'heat_exchanger_id': 1
-            }, {
-                'points': 1,
-                'side': 'SHELL',
-                'timestamp': f"2022-01-{day} {hour}:00:00",
-                'temperature': 40,
-                'flow_rate': 1.0,
-                'pressure': 1.0,
-                'velocity': 1.0,
-                'heat_exchanger_id': 1
-            }, {
-                'points': 2,
-                'side': 'SHELL',
-                'timestamp': f"2022-01-{day} {hour}:00:00",
-                'temperature': 30,
-                'flow_rate': 1.0,
-                'pressure': 1.0,
-                'velocity': 1.0,
-                'heat_exchanger_id': 1
-            }]
+            return False
         
         # 从测试数据库读取物理参数
         physical_data = self.data_loader.get_physical_parameters_by_hour(day, hour)
