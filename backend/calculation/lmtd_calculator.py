@@ -18,6 +18,10 @@ class LMTDCalculator:
             LMTD值
         """
         try:
+            # 添加None值检查
+            if T_h_in is None or T_h_out is None or T_c_in is None or T_c_out is None:
+                return 0
+                
             if flow_type == 'parallel':
                 # 并流情况
                 delta_T1 = T_h_in - T_c_in
@@ -50,6 +54,10 @@ class LMTDCalculator:
             K_lmtd值 (W/(m²·K))
         """
         try:
+            # 添加None值检查
+            if Q is None or A is None or lmtd is None:
+                return 0
+                
             if A <= 0 or lmtd <= 0:
                 return 0
             return Q / (A * lmtd)
@@ -69,6 +77,10 @@ class LMTDCalculator:
             传热量 (W)
         """
         try:
+            # 添加None值检查
+            if flow_rate is None or specific_heat is None or delta_T is None:
+                return 0
+                
             return flow_rate * specific_heat * delta_T
         except Exception as e:
             print(f"计算传热量失败: {e}")

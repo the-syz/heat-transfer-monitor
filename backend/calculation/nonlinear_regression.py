@@ -112,39 +112,45 @@ class NonlinearRegressionCalculator:
         
         for record in data_list:
             try:
-            # 获取或计算Re
-            if 'reynolds_number' in record:
-                Re = record['reynolds_number']
-                if Re is not None and Re > 0:
-                    pass
-                else:
-                    Re = None
-            elif 'Re' in record:
-                Re = record['Re']
-                if Re is not None and Re > 0:
-                    pass
-                else:
-                    Re = None
-                else:
+                # 获取或计算Re
+                Re = None
+                if 'reynolds_number' in record:
+                    Re_value = record['reynolds_number']
+                    if Re_value is not None and Re_value > 0:
+                        Re = Re_value
+                
+                if Re is None and 'Re' in record:
+                    Re_value = record['Re']
+                    if Re_value is not None and Re_value > 0:
+                        Re = Re_value
+                
+                if Re is None:
                     # 计算Re
                     rho = record.get('density', 1000)  # 密度 kg/m³
                     u = record.get('velocity', 0)  # 流速 m/s
                     mu = record.get('dynamic_viscosity', 0.001)  # 粘度 Pa·s
                     
-                    if u <= 0 or mu <= 0 or rho <= 0:
-                        continue
-                    
-                    Re = rho * u * d_i / mu
-                    
-                    if Re <= 0 or Re > 1e6:  # 增加上限过滤异常值
-                        continue
+                    if u > 0 and mu > 0 and rho > 0:
+                        Re = rho * u * d_i / mu
+                        if Re <= 0 or Re > 1e6:  # 增加上限过滤异常值
+                            Re = None
+                
+                if Re is None:
+                    continue
                 
                 # 计算Y=1/K
-                if 'K_lmtd' in record and record['K_lmtd'] > 0:
-                    K = record['K_lmtd']
-                elif 'K' in record and record['K'] > 0:
-                    K = record['K']
-                else:
+                K = None
+                if 'K_lmtd' in record:
+                    K_value = record['K_lmtd']
+                    if K_value is not None and K_value > 0:
+                        K = K_value
+                
+                if K is None and 'K' in record:
+                    K_value = record['K']
+                    if K_value is not None and K_value > 0:
+                        K = K_value
+                
+                if K is None:
                     # 尝试从其他参数计算K
                     continue
                 
@@ -285,31 +291,29 @@ class NonlinearRegressionCalculator:
         """
         try:
             # 从记录中获取雷诺数Re
-        if 'reynolds_number' in record:
-            Re = record['reynolds_number']
-            if Re is not None and Re > 0:
-                pass
-            else:
-                Re = None
-        elif 'Re' in record:
-            Re = record['Re']
-            if Re is not None and Re > 0:
-                pass
-            else:
-                Re = None
-            else:
+            Re = None
+            if 'reynolds_number' in record:
+                Re_value = record['reynolds_number']
+                if Re_value is not None and Re_value > 0:
+                    Re = Re_value
+            
+            if Re is None and 'Re' in record:
+                Re_value = record['Re']
+                if Re_value is not None and Re_value > 0:
+                    Re = Re_value
+            
+            if Re is None:
                 # 计算Re
                 d_i = self.geometry.get('d_i_original', 0.02)
                 rho = record.get('density', 1000)
                 u = record.get('velocity', 0)
                 mu = record.get('dynamic_viscosity', 0.001)
                 
-                if u <= 0 or mu <= 0:
-                    return 0
-                
-                Re = rho * u * d_i / mu
-                
-                if Re <= 0:
+                if u > 0 and mu > 0:
+                    Re = rho * u * d_i / mu
+                    if Re <= 0:
+                        return 0
+                else:
                     return 0
             
             # 使用模型计算Y=1/K
