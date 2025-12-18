@@ -266,3 +266,26 @@ class DataLoader:
         if self.db_conn.execute_query(self.db_conn.test_cursor, query, params):
             return self.db_conn.fetch_all(self.db_conn.test_cursor)
         return []
+    
+    def insert_performance_parameters(self, performance_params):
+        """
+        将性能参数插入到生产数据库
+        :param performance_params: 性能参数列表
+        :return: 是否成功插入
+        """
+        try:
+            for params in performance_params:
+                query = """
+                INSERT INTO performance_parameters (
+                    heat_exchanger_id, timestamp, heat_duty
+                ) VALUES (%s, %s, %s)
+                """
+                values = (
+                    params['heat_exchanger_id'], params['timestamp'], params['heat_duty']
+                )
+                self.db_conn.execute_prod_query(query, values)
+            
+            return True
+        except Exception as e:
+            print(f"插入性能参数失败: {e}")
+            return False
