@@ -261,12 +261,22 @@ class DataLoader:
                 thermal_conductivity
             )
             
+            # 从timestamp提取day和hour
+            try:
+                dt = datetime.strptime(op_data['timestamp'], '%Y-%m-%d %H:%M:%S')
+                day = dt.day
+                hour = dt.hour
+            except (ValueError, KeyError):
+                # 如果解析失败，使用默认值
+                day = op_data.get('day', 1)
+                hour = op_data.get('hour', 0)
+            
             # 构建处理后的数据
             processed = {
                 'points': op_data['points'],
                 'side': op_data['side'],
-                'day': op_data['day'],
-                'hour': op_data['hour'],
+                'day': day,
+                'hour': hour,
                 'timestamp': op_data['timestamp'],
                 'density': water_props['rho'],
                 'dynamic_viscosity': water_props['mu'],
