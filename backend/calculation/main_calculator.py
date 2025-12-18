@@ -221,24 +221,36 @@ class MainCalculator:
                 'side': 'TUBE',
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_duty': 10000,
+                'alpha_i': 5000.0,
+                'alpha_o': 3000.0,
+                'K': 2000.0,
                 'heat_exchanger_id': 1
             }, {
                 'points': 2,
                 'side': 'TUBE',
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_duty': 10000,
+                'alpha_i': 5000.0,
+                'alpha_o': 3000.0,
+                'K': 2000.0,
                 'heat_exchanger_id': 1
             }, {
                 'points': 1,
                 'side': 'SHELL',
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_duty': 10000,
+                'alpha_i': 5000.0,
+                'alpha_o': 3000.0,
+                'K': 2000.0,
                 'heat_exchanger_id': 1
             }, {
                 'points': 2,
                 'side': 'SHELL',
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_duty': 10000,
+                'alpha_i': 5000.0,
+                'alpha_o': 3000.0,
+                'K': 2000.0,
                 'heat_exchanger_id': 1
             }]
         
