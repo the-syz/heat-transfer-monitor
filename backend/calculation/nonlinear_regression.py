@@ -112,11 +112,19 @@ class NonlinearRegressionCalculator:
         
         for record in data_list:
             try:
-                # 计算雷诺数Re
-                if 'reynolds_number' in record and record['reynolds_number'] > 0:
-                    Re = record['reynolds_number']
-                elif 'Re' in record and record['Re'] > 0:
-                    Re = record['Re']
+            # 获取或计算Re
+            if 'reynolds_number' in record:
+                Re = record['reynolds_number']
+                if Re is not None and Re > 0:
+                    pass
+                else:
+                    Re = None
+            elif 'Re' in record:
+                Re = record['Re']
+                if Re is not None and Re > 0:
+                    pass
+                else:
+                    Re = None
                 else:
                     # 计算Re
                     rho = record.get('density', 1000)  # 密度 kg/m³
