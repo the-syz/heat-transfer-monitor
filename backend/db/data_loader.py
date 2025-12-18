@@ -183,6 +183,7 @@ class DataLoader:
         
         # 如果使用pyfluids失败，使用多项式近似计算水的物性参数
         # 这些是基于水在0-100°C范围内的近似公式
+        temp = max(0, min(temperature_celsius, 100))
         temp_adjusted = temp - 25  # 以25°C为基准
         
         # 密度 (kg/m³)
@@ -202,17 +203,6 @@ class DataLoader:
             'mu': mu,        # 动力粘度 (Pa·s)
             'lambda': lambda_val,  # 导热系数 (W/(m·K))
             'Cp': cp         # 比热容 (J/(kg·K))
-        }
-        except Exception as e:
-            print(f"计算水的物性参数失败: {e}")
-        
-        # 使用默认值，但根据温度做简单调整
-        temp_adjusted = temp - 25  # 以25°C为基准
-        return {
-            'rho': 1000 - 0.2 * temp_adjusted,  # 密度 (kg/m³)
-            'mu': 0.001 * np.exp(-0.02 * temp_adjusted),  # 动力粘度 (Pa·s)
-            'lambda': 0.6 + 0.001 * temp_adjusted,  # 导热系数 (W/(m·K))
-            'Cp': 4186 - 1 * temp_adjusted,  # 比热容 (J/(kg·K))
         }
     
     def calculate_reynolds_number(self, rho, u, d, mu):
