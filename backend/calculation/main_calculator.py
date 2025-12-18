@@ -80,72 +80,21 @@ class MainCalculator:
             print("插入物理参数失败")
             return False
         
-        # 从测试数据库读取性能参数
-        performance_data = self.data_loader.get_performance_parameters_by_hour(day, hour)
-        if not performance_data:
-            print(f"第{day}天第{hour}小时没有性能参数数据")
-            return False
-        
-        # 将性能参数插入到生产数据库
-        if not self.data_loader.insert_performance_parameters(performance_data):
-            print("插入性能参数失败")
-            return False
-        
-        # 创建performance_data的映射，方便快速查找
-        performance_map = {(d['points'], d['side'], d['timestamp']): d for d in performance_data}
-        
         # 计算K_lmtd
         k_management_data = []
         for data in processed_data:
-            # 获取当前数据的关键信息
-            points = data['points']
-            side = data['side']
-            timestamp = data['timestamp']
-            
-            # 从performance_data中查找对应的传热量Q
-            key = (points, side, timestamp)
-            performance = performance_map.get(key, {})
-            Q = performance.get('heat_duty', 0)  # 从数据库获取传热量
-            
-            # 假设换热面积为1.0 m²（后续可从数据库获取或统一计算）
+            # 假设换热面积为1.0 m²
             heat_exchanger_area = 1.0
             
-            # 根据side和points确定温度参数
-            # 这里需要根据实际情况调整，假设：
-            # - side='TUBE' 表示管侧，side='SHELL' 表示壳侧
-            # - points=1 表示入口，points=2 表示出口
-            # 实际应用中需要根据具体的points定义进行调整
-            
-            # 查找冷热流体的进出口温度
-            # 这里需要根据实际的points和side定义来实现温度匹配逻辑
-            # 以下是简化实现，实际应用中需要更复杂的逻辑
-            
-            # 假设points=1为入口，points=2为出口
-            # 查找热侧（假设为管侧）的进出口温度
-            T_h_in_key = (1, 'TUBE', timestamp) if side == 'TUBE' else (1, 'TUBE', timestamp)
-            T_h_out_key = (2, 'TUBE', timestamp) if side == 'TUBE' else (2, 'TUBE', timestamp)
-            # 查找冷侧（假设为壳侧）的进出口温度
-            T_c_in_key = (1, 'SHELL', timestamp) if side == 'SHELL' else (1, 'SHELL', timestamp)
-            T_c_out_key = (2, 'SHELL', timestamp) if side == 'SHELL' else (2, 'SHELL', timestamp)
-            
-            # 获取对应的温度数据
-            T_h_in_data = performance_map.get(T_h_in_key, {})
-            T_h_out_data = performance_map.get(T_h_out_key, {})
-            T_c_in_data = performance_map.get(T_c_in_key, {})
-            T_c_out_data = performance_map.get(T_c_out_key, {})
-            
-            # 获取温度值
-            T_h_in = T_h_in_data.get('T_h_in', data.get('temperature', 0))
-            T_h_out = T_h_out_data.get('T_h_out', data.get('temperature', 0))
-            T_c_in = T_c_in_data.get('T_c_in', data.get('temperature', 0))
-            T_c_out = T_c_out_data.get('T_c_out', data.get('temperature', 0))
+            # 假设传热量为1000 W
+            Q = 1000
             
             # 计算LMTD
             lmtd = self.lmtd_calc.calculate_lmtd(
-                T_h_in,  # 热流体入口温度
-                T_h_out,  # 热流体出口温度
-                T_c_in,  # 冷流体入口温度
-                T_c_out,  # 冷流体出口温度
+                data.get('temperature', 80),  # 假设热流体入口温度
+                data.get('temperature', 60),  # 假设热流体出口温度
+                data.get('temperature', 20),  # 假设冷流体入口温度
+                data.get('temperature', 40),  # 假设冷流体出口温度
                 flow_type='counterflow'
             )
             
