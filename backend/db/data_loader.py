@@ -303,19 +303,25 @@ class DataLoader:
         :param performance_params: 性能参数列表
         :return: 是否成功插入
         """
+        if not performance_params:
+            return True
+        
         try:
-            for params in performance_params:
-                query = """
-                INSERT INTO performance_parameters (
-                    heat_exchanger_id, timestamp, heat_duty
-                ) VALUES (%s, %s, %s)
-                """
-                values = (
-                    params['heat_exchanger_id'], params['timestamp'], params['heat_duty']
-                )
-                self.db_conn.execute_prod_query(query, values)
+            # 构建插入语句
+            columns = ', '.join(performance_params[0].keys())
+            placeholders = ', '.join(['%s'] * len(performance_params[0]))
+            query = f"INSERT INTO performance_parameters ({columns}) VALUES ({placeholders})"
             
+            # 准备数据
+            values = []
+            for record in performance_params:
+                values.append(tuple(record.values()))
+            
+            # 批量插入到生产数据库
+            self.db_conn.prod_cursor.executemany(query, values)
+            self.db_conn.commit(self.db_conn.prod_db)
             return True
         except Exception as e:
             print(f"插入性能参数失败: {e}")
+            self.db_conn.rollback(self.db_conn.prod_db)
             return False
