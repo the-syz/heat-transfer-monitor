@@ -1,11 +1,16 @@
 import json
 import os
+import sys
 import time
 import logging
 import requests
 import datetime
-from db.db_connection import DatabaseConnection
-from calculation.main_calculator import MainCalculator
+
+# 添加项目根目录到Python路径
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from backend.db.db_connection import DatabaseConnection
+from backend.calculation.main_calculator import MainCalculator
 
 # 配置日志记录
 logging.basicConfig(
@@ -21,7 +26,7 @@ logger = logging.getLogger(__name__)
 class Config:
     """配置类，管理脚本的各种配置参数"""
     def __init__(self):
-        self.config_file = "backend/config/config.json"
+        self.config_file = os.path.join(os.path.dirname(__file__), '..', 'backend', 'config', 'config.json')
         self.load_config()
         
         # API配置
