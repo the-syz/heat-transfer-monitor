@@ -257,17 +257,17 @@ class DataLoader:
                 thermal_conductivity
             )
             
-            # 构建处理后的数据
+            # 构建处理后的数据（使用数据库表中正确的字段名）
             processed = {
                 'points': op_data['points'],
                 'side': op_data['side'],
                 'timestamp': op_data['timestamp'],
                 'density': water_props['rho'],
-                'dynamic_viscosity': water_props['mu'],
+                'viscosity': water_props['mu'],  # 使用viscosity而不是dynamic_viscosity
                 'thermal_conductivity': thermal_conductivity,
                 'specific_heat': water_props['Cp'],
-                'reynolds_number': Re,
-                'prandtl_number': Pr,
+                'reynolds': Re,  # 使用reynolds而不是reynolds_number
+                'prandtl': Pr,  # 使用prandtl而不是prandtl_number
                 'temperature': temperature,
                 'flow_rate': op_data.get('flow_rate', 0),
                 'pressure': op_data.get('pressure', 0),
@@ -289,9 +289,13 @@ class DataLoader:
     
     def get_performance_parameters_by_hour(self, day, hour):
         """根据天数和小时获取性能参数"""
+        # 将day和hour转换为timestamp范围查询
+        start_time = f"2022-01-{day} {hour}:00:00"
+        end_time = f"2022-01-{day} {hour}:59:59"
+        
         query = """SELECT * FROM performance_parameters 
-                   WHERE day = %s AND hour = %s"""
-        params = (day, hour)
+                   WHERE timestamp BETWEEN %s AND %s"""
+        params = (start_time, end_time)
         
         if self.db_conn.execute_query(self.db_conn.test_cursor, query, params):
             return self.db_conn.fetch_all(self.db_conn.test_cursor)
