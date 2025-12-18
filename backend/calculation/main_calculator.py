@@ -5,8 +5,8 @@ from datetime import datetime
 import pandas as pd
 from .lmtd_calculator import LMTDCalculator
 from .nonlinear_regression import NonlinearRegressionCalculator
-from ..db.data_loader import DataLoader
-from ..db.db_connection import DatabaseConnection
+from db.data_loader import DataLoader
+from db.db_connection import DatabaseConnection
 
 class MainCalculator:
     def __init__(self, config_file):
