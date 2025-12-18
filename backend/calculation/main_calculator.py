@@ -288,11 +288,11 @@ class MainCalculator:
             heat_exchanger_area = self.get_heat_exchanger_area()
             
             # 计算K_lmtd
-             k_lmtd = 0
-             # 确保所有值都不是None
-             Q = Q or 0
-             lmtd = lmtd or 0
-             heat_exchanger_area = heat_exchanger_area or 0
+            k_lmtd = 0
+            # 确保所有值都不是None
+            Q = Q or 0
+            lmtd = lmtd or 0
+            heat_exchanger_area = heat_exchanger_area or 0
             if Q > 0 and lmtd > 0 and heat_exchanger_area > 0:
                 k_lmtd = self.lmtd_calc.calculate_k_lmtd(Q, heat_exchanger_area, lmtd)
             
