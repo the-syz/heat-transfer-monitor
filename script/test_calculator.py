@@ -3,6 +3,7 @@ import os
 import json
 
 # 添加项目根目录到Python路径
+sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
 
 from backend.calculation.lmtd_calculator import LMTDCalculator
