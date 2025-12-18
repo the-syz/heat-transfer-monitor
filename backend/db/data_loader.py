@@ -23,13 +23,9 @@ class DataLoader:
     
     def get_physical_parameters_by_hour(self, day, hour):
         """根据天数和小时从测试数据库读取物理参数"""
-        # 计算时间范围
-        start_date = f"2022-01-{day} {hour}:00:00"
-        end_date = f"2022-01-{day} {hour}:59:59"
-        
         query = """SELECT * FROM physical_parameters 
-                   WHERE timestamp BETWEEN %s AND %s"""
-        params = (start_date, end_date)
+                   WHERE day = %s AND hour = %s"""
+        params = (day, hour)
         
         if self.db_conn.execute_query(self.db_conn.test_cursor, query, params):
             return self.db_conn.fetch_all(self.db_conn.test_cursor)
@@ -87,15 +83,11 @@ class DataLoader:
     
     def get_performance_parameters_by_hour(self, day, hour):
         """根据天数和小时从测试数据库读取性能参数"""
-        # 计算时间范围
-        start_date = f"2022-01-{day} {hour}:00:00"
-        end_date = f"2022-01-{day} {hour}:59:59"
-        
         query = """
         SELECT * FROM performance_parameters 
-        WHERE timestamp BETWEEN %s AND %s
+        WHERE day = %s AND hour = %s
         """
-        params = (start_date, end_date)
+        params = (day, hour)
         
         if self.db_conn.execute_query(self.db_conn.test_cursor, query, params):
             return self.db_conn.fetch_all(self.db_conn.test_cursor)
@@ -152,35 +144,58 @@ class DataLoader:
             return False
     
     def get_water_properties(self, temperature_celsius):
-        """根据温度计算水的物性参数"""
+        """根据温度计算水的物性参数（使用pyfluids库）"""
         try:
             # 确保温度在合理范围内
             temp = max(0, min(temperature_celsius, 100))
+            
+            # 使用pyFluids库计算水的物性参数
+            try:
+                # 方法1：直接使用构造函数设置状态
+                water = Fluid(FluidsList.Water, temperature=temp, pressure=101325)  # 101325 Pa = 1 atm
+            except (TypeError, ValueError):
+                try:
+                    # 方法2：先创建实例，再设置状态（使用T和P参数）
+                    water = Fluid(FluidsList.Water)
+                    water.set_state(T=temp + 273.15, P=1.01325)  # 转换为K和bar
+                except (TypeError, ValueError):
+                    # 方法3：尝试使用其他参数组合
+                    water = Fluid(FluidsList.Water)
+                    try:
+                        water.with_state(T=temp + 273.15, P=1.01325)
+                    except (TypeError, ValueError):
+                        # 如果所有尝试都失败，使用默认值
+                        return {
+                            'rho': 1000,  # kg/m³
+                            'mu': 0.001,  # Pa·s
+                            'lambda': 0.6,  # W/(m·K)
+                            'Cp': 4186    # J/(kg·K)
+                        }
+            
+            # 尝试获取物性参数
+            rho = water.density
+            mu = water.dynamic_viscosity
+            lambda_val = water.thermal_conductivity
+            cp = water.specific_heat
+            
+            # 确保所有参数都有效
+            if all(param > 0 for param in [rho, mu, lambda_val, cp]):
+                return {
+                    'rho': rho,      # 密度 (kg/m³)
+                    'mu': mu,        # 动力粘度 (Pa·s)
+                    'lambda': lambda_val,  # 导热系数 (W/(m·K))
+                    'Cp': cp         # 比热容 (J/(kg·K))
+                }
         except Exception as e:
             print(f"计算水的物性参数失败: {e}")
-            temp = 25  # 默认25°C
         
-        # 直接使用多项式近似计算水的物性参数
-        # 这些是基于水在0-100°C范围内的近似公式，可靠性高且无外部依赖
+        # 使用默认值，但根据温度做简单调整
         temp_adjusted = temp - 25  # 以25°C为基准
-        
-        # 密度 (kg/m³) - 近似公式
-        rho = 1000 - 0.2 * temp_adjusted - 0.0001 * temp_adjusted ** 2
-        
-        # 动力粘度 (Pa·s) - 近似公式
-        mu = 0.001 * np.exp(-0.02 * temp_adjusted - 0.0005 * temp_adjusted ** 2)
-        
-        # 导热系数 (W/(m·K)) - 近似公式
-        lambda_val = 0.6 + 0.001 * temp_adjusted + 0.000005 * temp_adjusted ** 2
-        
-        # 比热容 (J/(kg·K)) - 近似公式
-        cp = 4186 - 1 * temp_adjusted + 0.05 * temp_adjusted ** 2
-        
         return {
-            'rho': rho,      # 密度 (kg/m³)
-            'mu': mu,        # 动力粘度 (Pa·s)
-            'lambda': lambda_val,  # 导热系数 (W/(m·K))
-            'Cp': cp         # 比热容 (J/(kg·K))
+            'rho': 1000 - 0.2 * temp_adjusted,  # 密度 (kg/m³)
+            'mu': 0.001 * np.exp(-0.02 * temp_adjusted),  # 动力粘度 (Pa·s)
+            'lambda': 0.6 + 0.001 * temp_adjusted,  # 导热系数 (W/(m·K))
+            'Cp': 4186 - 1 * temp_adjusted,  # 比热容 (J/(kg·K))
         }
     
     def calculate_reynolds_number(self, rho, u, d, mu):
@@ -239,22 +254,12 @@ class DataLoader:
                 thermal_conductivity
             )
             
-            # 从timestamp提取day和hour
-            try:
-                dt = datetime.strptime(op_data['timestamp'], '%Y-%m-%d %H:%M:%S')
-                day = dt.day
-                hour = dt.hour
-            except (ValueError, KeyError):
-                # 如果解析失败，使用默认值
-                day = op_data.get('day', 1)
-                hour = op_data.get('hour', 0)
-            
             # 构建处理后的数据
             processed = {
                 'points': op_data['points'],
                 'side': op_data['side'],
-                'day': day,
-                'hour': hour,
+                'day': op_data['day'],
+                'hour': op_data['hour'],
                 'timestamp': op_data['timestamp'],
                 'density': water_props['rho'],
                 'dynamic_viscosity': water_props['mu'],
@@ -283,13 +288,9 @@ class DataLoader:
     
     def get_performance_parameters_by_hour(self, day, hour):
         """根据天数和小时获取性能参数"""
-        # 计算时间范围
-        start_date = f"2022-01-{day} {hour}:00:00"
-        end_date = f"2022-01-{day} {hour}:59:59"
-        
         query = """SELECT * FROM performance_parameters 
-                   WHERE timestamp BETWEEN %s AND %s"""
-        params = (start_date, end_date)
+                   WHERE day = %s AND hour = %s"""
+        params = (day, hour)
         
         if self.db_conn.execute_query(self.db_conn.test_cursor, query, params):
             return self.db_conn.fetch_all(self.db_conn.test_cursor)

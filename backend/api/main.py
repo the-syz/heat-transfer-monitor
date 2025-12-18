@@ -70,18 +70,12 @@ async def get_operation_parameters(heat_exchanger_id: int = None, day: int = Non
         if heat_exchanger_id:
             query += " AND heat_exchanger_id = %s"
             params.append(heat_exchanger_id)
-        if day and hour:
-            # 计算时间范围
-            start_date = f"2022-01-{day} {hour}:00:00"
-            end_date = f"2022-01-{day} {hour}:59:59"
-            query += " AND timestamp BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        elif day:
-            # 计算日期范围
-            start_date = f"2022-01-{day} 00:00:00"
-            end_date = f"2022-01-{day} 23:59:59"
-            query += " AND timestamp BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
+        if day:
+            query += " AND day = %s"
+            params.append(day)
+        if hour:
+            query += " AND hour = %s"
+            params.append(hour)
         
         # 执行查询
         if calculator.db_conn.execute_query(calculator.db_conn.prod_cursor, query, params):
@@ -106,18 +100,12 @@ async def get_physical_parameters(heat_exchanger_id: int = None, day: int = None
         if heat_exchanger_id:
             query += " AND heat_exchanger_id = %s"
             params.append(heat_exchanger_id)
-        if day and hour:
-            # 计算时间范围
-            start_date = f"2022-01-{day} {hour}:00:00"
-            end_date = f"2022-01-{day} {hour}:59:59"
-            query += " AND timestamp BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        elif day:
-            # 计算日期范围
-            start_date = f"2022-01-{day} 00:00:00"
-            end_date = f"2022-01-{day} 23:59:59"
-            query += " AND timestamp BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
+        if day:
+            query += " AND day = %s"
+            params.append(day)
+        if hour:
+            query += " AND hour = %s"
+            params.append(hour)
         
         # 执行查询
         if calculator.db_conn.execute_query(calculator.db_conn.prod_cursor, query, params):
@@ -142,18 +130,12 @@ async def get_k_management(heat_exchanger_id: int = None, day: int = None, hour:
         if heat_exchanger_id:
             query += " AND heat_exchanger_id = %s"
             params.append(heat_exchanger_id)
-        if day and hour:
-            # 计算时间范围
-            start_date = f"2022-01-{day} {hour}:00:00"
-            end_date = f"2022-01-{day} {hour}:59:59"
-            query += " AND timestamp BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        elif day:
-            # 计算日期范围
-            start_date = f"2022-01-{day} 00:00:00"
-            end_date = f"2022-01-{day} 23:59:59"
-            query += " AND timestamp BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
+        if day:
+            query += " AND day = %s"
+            params.append(day)
+        if hour:
+            query += " AND hour = %s"
+            params.append(hour)
         
         # 执行查询
         if calculator.db_conn.execute_query(calculator.db_conn.prod_cursor, query, params):
@@ -178,18 +160,12 @@ async def get_performance(heat_exchanger_id: int = None, day: int = None, hour: 
         if heat_exchanger_id:
             query += " AND heat_exchanger_id = %s"
             params.append(heat_exchanger_id)
-        if day and hour:
-            # 计算时间范围
-            start_date = f"2022-01-{day} {hour}:00:00"
-            end_date = f"2022-01-{day} {hour}:59:59"
-            query += " AND timestamp BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        elif day:
-            # 计算日期范围
-            start_date = f"2022-01-{day} 00:00:00"
-            end_date = f"2022-01-{day} 23:59:59"
-            query += " AND timestamp BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
+        if day:
+            query += " AND day = %s"
+            params.append(day)
+        if hour:
+            query += " AND hour = %s"
+            params.append(hour)
         
         # 执行查询
         if calculator.db_conn.execute_query(calculator.db_conn.prod_cursor, query, params):
@@ -227,11 +203,8 @@ async def get_model_parameters(heat_exchanger_id: int = None, day: int = None):
             query += " AND heat_exchanger_id = %s"
             params.append(heat_exchanger_id)
         if day:
-            # 计算日期范围
-            start_date = f"2022-01-{day} 00:00:00"
-            end_date = f"2022-01-{day} 23:59:59"
-            query += " AND timestamp BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
+            query += " AND day = %s"
+            params.append(day)
         
         # 执行查询
         if calculator.db_conn.execute_query(calculator.db_conn.prod_cursor, query, params):
