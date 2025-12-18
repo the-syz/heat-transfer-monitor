@@ -327,12 +327,14 @@ class MainCalculator:
             
             # 根据时间决定K值：每日前3小时使用K_LMTD，其余时间使用K_predict
             K = K_lmtd
-            if hour >= 3:
+            if hour is not None and hour >= 3:
                 # 使用非线性回归模型预测K值
-                K = self.nonlinear_calc.predict_K(data['reynolds'], model_params['a'], model_params['p'], model_params['b'])
+                Re = data.get('reynolds_number', 0)
+                K = self.nonlinear_calc.predict_K(Re, model_params['a'], model_params['p'], model_params['b'])
             
             # 计算alpha_i
-            alpha_i = self.nonlinear_calc.calculate_alpha_i(model_params['a'], model_params['p'], data['reynolds'])
+            Re = data.get('reynolds_number', 0)
+            alpha_i = self.nonlinear_calc.calculate_alpha_i(model_params['a'], model_params['p'], Re)
             
             # 从测试数据库获取alpha_o（按相同点、时间戳和换热器ID）
             alpha_o = alpha_o_map.get(key, None)
