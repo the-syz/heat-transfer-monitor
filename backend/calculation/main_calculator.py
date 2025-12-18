@@ -130,56 +130,13 @@ class MainCalculator:
         physical_data = self.data_loader.get_physical_parameters_by_hour(day, hour)
         if not physical_data:
             print(f"第{day}天第{hour}小时没有物理参数数据")
-            # 模拟生成一些测试数据
-            physical_data = [{
-                'points': 1,
-                'side': 'TUBE',
-                'thermal_conductivity': 0.6,
-                'viscosity': 0.001,  # 使用viscosity而不是dynamic_viscosity
-                'specific_heat': 4186,
-                'density': 1000,
-                'prandtl': 7.0,  # 使用prandtl而不是prandtl_number
-                'timestamp': f"2022-01-{day} {hour}:00:00",
-                'heat_exchanger_id': 1
-            }, {
-                'points': 2,
-                'side': 'TUBE',
-                'thermal_conductivity': 0.6,
-                'viscosity': 0.001,  # 使用viscosity而不是dynamic_viscosity
-                'specific_heat': 4186,
-                'density': 1000,
-                'prandtl': 7.0,  # 使用prandtl而不是prandtl_number
-                'timestamp': f"2022-01-{day} {hour}:00:00",
-                'heat_exchanger_id': 1
-            }, {
-                'points': 1,
-                'side': 'SHELL',
-                'thermal_conductivity': 0.6,
-                'viscosity': 0.001,  # 使用viscosity而不是dynamic_viscosity
-                'specific_heat': 4186,
-                'density': 1000,
-                'prandtl': 7.0,  # 使用prandtl而不是prandtl_number
-                'timestamp': f"2022-01-{day} {hour}:00:00",
-                'heat_exchanger_id': 1
-            }, {
-                'points': 2,
-                'side': 'SHELL',
-                'thermal_conductivity': 0.6,
-                'viscosity': 0.001,  # 使用viscosity而不是dynamic_viscosity
-                'specific_heat': 4186,
-                'density': 1000,
-                'prandtl': 7.0,  # 使用prandtl而不是prandtl_number
-                'timestamp': f"2022-01-{day} {hour}:00:00",
-                'heat_exchanger_id': 1
-            }]
+            return False
         
-        # 从测试数据库读取性能参数（仅用于获取alpha_o）
-        test_performance_data = self.data_loader.get_performance_parameters_by_hour(day, hour)
-        # 构建alpha_o映射表，按相同点、时间戳和换热器ID获取
-        alpha_o_map = {}
-        for data in test_performance_data:
-            key = (data['heat_exchanger_id'], data['timestamp'], data['points'], data['side'])
-            alpha_o_map[key] = data.get('alpha_o', None)
+        # 从测试数据库读取性能参数
+        performance_data = self.data_loader.get_performance_parameters_by_hour(day, hour)
+        if not performance_data:
+            print(f"第{day}天第{hour}小时没有性能参数数据")
+            return False
         
         # 处理运行数据，计算物理参数
         processed_data = self.data_loader.process_operation_data(operation_data, physical_data, self.heat_exchanger)
