@@ -9,9 +9,13 @@ class DataLoader:
     
     def get_operation_parameters_by_hour(self, day, hour):
         """根据天数和小时从测试数据库读取运行参数"""
+        # 计算时间范围
+        start_date = f"2022-01-{day} {hour}:00:00"
+        end_date = f"2022-01-{day} {hour}:59:59"
+        
         query = """SELECT * FROM operation_parameters 
-                   WHERE day = %s AND hour = %s"""
-        params = (day, hour)
+                   WHERE timestamp BETWEEN %s AND %s"""
+        params = (start_date, end_date)
         
         if self.db_conn.execute_query(self.db_conn.test_cursor, query, params):
             return self.db_conn.fetch_all(self.db_conn.test_cursor)
@@ -81,7 +85,7 @@ class DataLoader:
         """根据天数和小时从测试数据库读取性能参数"""
         query = """
         SELECT * FROM performance_parameters 
-        WHERE DAY(timestamp) = %s AND HOUR(timestamp) = %s
+        WHERE day = %s AND hour = %s
         """
         params = (day, hour)
         
@@ -111,6 +115,31 @@ class DataLoader:
             return True
         except Exception as e:
             print(f"插入k_management失败: {e}")
+            self.db_conn.rollback(self.db_conn.prod_db)
+            return False
+    
+    def insert_performance_parameters(self, data):
+        """将性能参数插入到生产数据库"""
+        if not data:
+            return True
+        
+        # 构建插入语句
+        columns = ', '.join(data[0].keys())
+        placeholders = ', '.join(['%s'] * len(data[0]))
+        query = f"INSERT INTO performance_parameters ({columns}) VALUES ({placeholders})"
+        
+        # 准备数据
+        values = []
+        for record in data:
+            values.append(tuple(record.values()))
+        
+        try:
+            # 批量插入
+            self.db_conn.prod_cursor.executemany(query, values)
+            self.db_conn.commit(self.db_conn.prod_db)
+            return True
+        except Exception as e:
+            print(f"插入性能参数失败: {e}")
             self.db_conn.rollback(self.db_conn.prod_db)
             return False
     

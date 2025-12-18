@@ -3,10 +3,10 @@ import os
 import json
 
 # 添加项目根目录到Python路径
-sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('..'))
 
-from calculation.lmtd_calculator import LMTDCalculator
-from calculation.nonlinear_regression import NonlinearRegressionCalculator
+from backend.calculation.lmtd_calculator import LMTDCalculator
+from backend.calculation.nonlinear_regression import NonlinearRegressionCalculator
 
 def test_lmtd_calculator():
     """测试LMTD计算器"""
