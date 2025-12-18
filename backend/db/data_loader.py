@@ -23,9 +23,13 @@ class DataLoader:
     
     def get_physical_parameters_by_hour(self, day, hour):
         """根据天数和小时从测试数据库读取物理参数"""
+        # 计算时间范围
+        start_date = f"2022-01-{day} {hour}:00:00"
+        end_date = f"2022-01-{day} {hour}:59:59"
+        
         query = """SELECT * FROM physical_parameters 
-                   WHERE day = %s AND hour = %s"""
-        params = (day, hour)
+                   WHERE timestamp BETWEEN %s AND %s"""
+        params = (start_date, end_date)
         
         if self.db_conn.execute_query(self.db_conn.test_cursor, query, params):
             return self.db_conn.fetch_all(self.db_conn.test_cursor)
@@ -83,11 +87,15 @@ class DataLoader:
     
     def get_performance_parameters_by_hour(self, day, hour):
         """根据天数和小时从测试数据库读取性能参数"""
+        # 计算时间范围
+        start_date = f"2022-01-{day} {hour}:00:00"
+        end_date = f"2022-01-{day} {hour}:59:59"
+        
         query = """
         SELECT * FROM performance_parameters 
-        WHERE day = %s AND hour = %s
+        WHERE timestamp BETWEEN %s AND %s
         """
-        params = (day, hour)
+        params = (start_date, end_date)
         
         if self.db_conn.execute_query(self.db_conn.test_cursor, query, params):
             return self.db_conn.fetch_all(self.db_conn.test_cursor)
@@ -288,9 +296,13 @@ class DataLoader:
     
     def get_performance_parameters_by_hour(self, day, hour):
         """根据天数和小时获取性能参数"""
+        # 计算时间范围
+        start_date = f"2022-01-{day} {hour}:00:00"
+        end_date = f"2022-01-{day} {hour}:59:59"
+        
         query = """SELECT * FROM performance_parameters 
-                   WHERE day = %s AND hour = %s"""
-        params = (day, hour)
+                   WHERE timestamp BETWEEN %s AND %s"""
+        params = (start_date, end_date)
         
         if self.db_conn.execute_query(self.db_conn.test_cursor, query, params):
             return self.db_conn.fetch_all(self.db_conn.test_cursor)
