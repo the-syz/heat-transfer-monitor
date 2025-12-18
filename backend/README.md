@@ -60,7 +60,8 @@ backend/
 - `algorithms`: 支持的算法列表
 - `selected_algorithm`: 选定的算法
 - `database`: 数据库连接信息
-- `geometry_params`: 几何参数
+
+**注意**：几何参数（如管径、换热面积等）不再通过配置文件设置，而是直接从数据库的`heat_exchanger`表中读取。
 
 ## 数据库结构
 
