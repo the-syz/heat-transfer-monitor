@@ -129,8 +129,6 @@ class MainCalculator:
             operation_data = [{
                 'points': 1,
                 'side': 'TUBE',
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'temperature': 80,
                 'flow_rate': 1.0,
@@ -140,8 +138,6 @@ class MainCalculator:
             }, {
                 'points': 2,
                 'side': 'TUBE',
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'temperature': 60,
                 'flow_rate': 1.0,
@@ -151,8 +147,6 @@ class MainCalculator:
             }, {
                 'points': 1,
                 'side': 'SHELL',
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'temperature': 40,
                 'flow_rate': 1.0,
@@ -162,8 +156,6 @@ class MainCalculator:
             }, {
                 'points': 2,
                 'side': 'SHELL',
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'temperature': 30,
                 'flow_rate': 1.0,
@@ -185,8 +177,6 @@ class MainCalculator:
                 'specific_heat': 4186,
                 'density': 1000,
                 'prandtl_number': 7.0,
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_exchanger_id': 1
             }, {
@@ -197,8 +187,6 @@ class MainCalculator:
                 'specific_heat': 4186,
                 'density': 1000,
                 'prandtl_number': 7.0,
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_exchanger_id': 1
             }, {
@@ -209,8 +197,6 @@ class MainCalculator:
                 'specific_heat': 4186,
                 'density': 1000,
                 'prandtl_number': 7.0,
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_exchanger_id': 1
             }, {
@@ -221,8 +207,6 @@ class MainCalculator:
                 'specific_heat': 4186,
                 'density': 1000,
                 'prandtl_number': 7.0,
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_exchanger_id': 1
             }]
@@ -235,32 +219,24 @@ class MainCalculator:
             performance_data = [{
                 'points': 1,
                 'side': 'TUBE',
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_duty': 10000,
                 'heat_exchanger_id': 1
             }, {
                 'points': 2,
                 'side': 'TUBE',
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_duty': 10000,
                 'heat_exchanger_id': 1
             }, {
                 'points': 1,
                 'side': 'SHELL',
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_duty': 10000,
                 'heat_exchanger_id': 1
             }, {
                 'points': 2,
                 'side': 'SHELL',
-                'day': day,
-                'hour': hour,
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_duty': 10000,
                 'heat_exchanger_id': 1
@@ -343,8 +319,6 @@ class MainCalculator:
             k_data = {
                 'points': data['points'],
                 'side': data['side'],
-                'day': day,
-                'hour': hour,
                 'timestamp': timestamp,
                 'K_lmtd': k_lmtd,
                 'heat_exchanger_id': heat_exchanger_id
@@ -407,8 +381,6 @@ class MainCalculator:
             result = {
                 'points': record['points'],
                 'side': record['side'],
-                'day': record['day'],
-                'hour': record['hour'],
                 'timestamp': record['timestamp'],
                 'K_predicted': K_pred,
                 'alpha_i': alpha_i,
