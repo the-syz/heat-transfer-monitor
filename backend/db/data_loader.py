@@ -77,6 +77,18 @@ class DataLoader:
             self.db_conn.rollback(self.db_conn.prod_db)
             return False
     
+    def get_performance_parameters_by_hour(self, day, hour):
+        """根据天数和小时从测试数据库读取性能参数"""
+        query = """
+        SELECT * FROM performance_parameters 
+        WHERE DAY(timestamp) = %s AND HOUR(timestamp) = %s
+        """
+        params = (day, hour)
+        
+        if self.db_conn.execute_query(self.db_conn.test_cursor, query, params):
+            return self.db_conn.fetch_all(self.db_conn.test_cursor)
+        return []
+    
     def insert_k_management(self, data):
         """将K_lmtd插入到生产数据库的k_management表"""
         if not data:
