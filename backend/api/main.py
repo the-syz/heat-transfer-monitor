@@ -29,7 +29,7 @@ app.add_middleware(
 )
 
 # 加载配置
-CONFIG_FILE = "../config/config.json"
+CONFIG_FILE = "config/config.json"
 with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
     config = json.load(f)
 
