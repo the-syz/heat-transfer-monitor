@@ -173,40 +173,40 @@ class MainCalculator:
                 'points': 1,
                 'side': 'TUBE',
                 'thermal_conductivity': 0.6,
-                'dynamic_viscosity': 0.001,
+                'viscosity': 0.001,  # 使用viscosity而不是dynamic_viscosity
                 'specific_heat': 4186,
                 'density': 1000,
-                'prandtl_number': 7.0,
+                'prandtl': 7.0,  # 使用prandtl而不是prandtl_number
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_exchanger_id': 1
             }, {
                 'points': 2,
                 'side': 'TUBE',
                 'thermal_conductivity': 0.6,
-                'dynamic_viscosity': 0.001,
+                'viscosity': 0.001,  # 使用viscosity而不是dynamic_viscosity
                 'specific_heat': 4186,
                 'density': 1000,
-                'prandtl_number': 7.0,
+                'prandtl': 7.0,  # 使用prandtl而不是prandtl_number
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_exchanger_id': 1
             }, {
                 'points': 1,
                 'side': 'SHELL',
                 'thermal_conductivity': 0.6,
-                'dynamic_viscosity': 0.001,
+                'viscosity': 0.001,  # 使用viscosity而不是dynamic_viscosity
                 'specific_heat': 4186,
                 'density': 1000,
-                'prandtl_number': 7.0,
+                'prandtl': 7.0,  # 使用prandtl而不是prandtl_number
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_exchanger_id': 1
             }, {
                 'points': 2,
                 'side': 'SHELL',
                 'thermal_conductivity': 0.6,
-                'dynamic_viscosity': 0.001,
+                'viscosity': 0.001,  # 使用viscosity而不是dynamic_viscosity
                 'specific_heat': 4186,
                 'density': 1000,
-                'prandtl_number': 7.0,
+                'prandtl': 7.0,  # 使用prandtl而不是prandtl_number
                 'timestamp': f"2022-01-{day} {hour}:00:00",
                 'heat_exchanger_id': 1
             }]
