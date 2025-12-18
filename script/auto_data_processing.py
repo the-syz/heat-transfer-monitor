@@ -100,11 +100,19 @@ class AutoDataProcessor:
         try:
             url = f"{self.api_url}/process-data/{day}/{hour}"
             response = requests.post(url, timeout=self.api_timeout)
-            response.raise_for_status()
-            result = response.json()
             
-            logger.info(f"数据处理完成 - 第{day}天第{hour}小时: {result['status']}")
-            return result['status'] == 'success'
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"数据处理完成 - 第{day}天第{hour}小时: {result['status']}")
+                return result['status'] == 'success'
+            else:
+                logger.warning(f"数据处理API返回错误状态码 {response.status_code} (第{day}天第{hour}小时)")
+                try:
+                    error_detail = response.json()
+                    logger.error(f"API错误详情: {error_detail}")
+                except:
+                    logger.error(f"API错误内容: {response.text}")
+                return False
             
         except requests.RequestException as e:
             logger.error(f"调用数据处理API失败 (第{day}天第{hour}小时): {e}")
