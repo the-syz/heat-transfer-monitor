@@ -268,7 +268,6 @@ class DataLoader:
                 'specific_heat': water_props['Cp'],
                 'reynolds': Re,  # 使用reynolds而不是reynolds_number
                 'prandtl': Pr,  # 使用prandtl而不是prandtl_number
-                'velocity': op_data.get('velocity', 0),
                 'heat_exchanger_id': op_data.get('heat_exchanger_id', 1)
             }
             
