@@ -109,7 +109,10 @@ class DataLoader:
         # 构建插入语句
         columns = ', '.join(data[0].keys())
         placeholders = ', '.join(['%s'] * len(data[0]))
-        query = f"INSERT INTO k_management ({columns}) VALUES ({placeholders})"
+        
+        # 构建ON DUPLICATE KEY UPDATE子句
+        update_clause = ', '.join([f"{col} = VALUES({col})" for col in data[0].keys()])
+        query = f"INSERT INTO k_management ({columns}) VALUES ({placeholders}) ON DUPLICATE KEY UPDATE {update_clause}"
         
         # 准备数据
         values = []
