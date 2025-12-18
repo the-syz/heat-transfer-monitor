@@ -65,10 +65,10 @@ class DataLoader:
         if not data:
             return True
         
-        # 构建插入语句
+        # 构建插入语句，使用INSERT IGNORE避免重复主键错误
         columns = ', '.join(data[0].keys())
         placeholders = ', '.join(['%s'] * len(data[0]))
-        query = f"INSERT INTO physical_parameters ({columns}) VALUES ({placeholders})"
+        query = f"INSERT IGNORE INTO physical_parameters ({columns}) VALUES ({placeholders})"
         
         # 准备数据
         values = []
