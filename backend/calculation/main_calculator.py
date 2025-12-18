@@ -329,11 +329,11 @@ class MainCalculator:
             K = K_lmtd
             if hour is not None and hour >= 3:
                 # 使用非线性回归模型预测K值
-                Re = data.get('reynolds_number', 0)
+                Re = data.get('reynolds', 0)
                 K = self.nonlinear_calc.predict_K(Re, model_params['a'], model_params['p'], model_params['b'])
             
             # 计算alpha_i
-            Re = data.get('reynolds_number', 0)
+            Re = data.get('reynolds', 0)
             alpha_i = self.nonlinear_calc.calculate_alpha_i(model_params['a'], model_params['p'], Re)
             
             # 从测试数据库获取alpha_o（按相同点、时间戳和换热器ID）
