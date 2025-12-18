@@ -358,19 +358,6 @@ class MainCalculator:
             
             performance_data.append(performance_entry)
         
-        # 处理运行数据，计算物理参数
-        processed_data = self.data_loader.process_operation_data(operation_data, physical_data, self.heat_exchanger)
-        
-        # 将运行参数插入到生产数据库
-        if not self.data_loader.insert_operation_parameters(operation_data):
-            print("插入运行参数失败")
-            return False
-        
-        # 将物理参数插入到生产数据库
-        if not self.data_loader.insert_physical_parameters(processed_data):
-            print("插入物理参数失败")
-            return False
-        
         # 将性能参数插入到生产数据库
         if not self.data_loader.insert_performance_parameters(performance_data):
             print("插入性能参数失败")
