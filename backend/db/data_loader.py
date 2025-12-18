@@ -40,10 +40,10 @@ class DataLoader:
         if not data:
             return True
         
-        # 构建插入语句
+        # 构建插入语句，使用INSERT IGNORE避免重复主键错误
         columns = ', '.join(data[0].keys())
         placeholders = ', '.join(['%s'] * len(data[0]))
-        query = f"INSERT INTO operation_parameters ({columns}) VALUES ({placeholders})"
+        query = f"INSERT IGNORE INTO operation_parameters ({columns}) VALUES ({placeholders})"
         
         # 准备数据
         values = []
@@ -51,13 +51,13 @@ class DataLoader:
             values.append(tuple(record.values()))
         
         try:
-            # 批量插入
-            self.db_conn.test_cursor.executemany(query, values)
-            self.db_conn.commit(self.db_conn.test_db)
+            # 批量插入到生产数据库
+            self.db_conn.prod_cursor.executemany(query, values)
+            self.db_conn.commit(self.db_conn.prod_db)
             return True
         except Exception as e:
             print(f"插入运行参数失败: {e}")
-            self.db_conn.rollback(self.db_conn.test_db)
+            self.db_conn.rollback(self.db_conn.prod_db)
             return False
     
     def insert_physical_parameters(self, data):
@@ -163,15 +163,10 @@ class DataLoader:
                 water = Fluid(FluidsList.Water, temperature=temp, pressure=101325)  # 101325 Pa = 1 atm
             except (TypeError, ValueError):
                 try:
-                    # 方法2：先创建实例，再设置状态（使用T和P参数）
+                    # 方法2：尝试使用其他参数组合
                     water = Fluid(FluidsList.Water)
-                    water.set_state(T=temp + 273.15, P=1.01325)  # 转换为K和bar
+                    water.with_state(T=temp + 273.15, P=1.01325)
                 except (TypeError, ValueError):
-                    # 方法3：尝试使用其他参数组合
-                    water = Fluid(FluidsList.Water)
-                    try:
-                        water.with_state(T=temp + 273.15, P=1.01325)
-                    except (TypeError, ValueError):
                         # 如果所有尝试都失败，使用默认值
                         return {
                             'rho': 1000,  # kg/m³
