@@ -26,19 +26,28 @@ class MainCalculator:
         heat_exchangers = self.data_loader.get_all_heat_exchangers()
         if heat_exchangers:
             # 假设使用第一个换热器的参数
-            heat_exchanger = heat_exchangers[0]
+            self.heat_exchanger = heat_exchangers[0]
             self.geometry_params = {
-                'd_i_original': heat_exchanger['d_i_original'],
-                'd_o': heat_exchanger['d_o'],
-                'lambda_t': heat_exchanger['lambda_t']
+                'd_i_original': self.heat_exchanger['d_i_original'],
+                'd_o': self.heat_exchanger['d_o'],
+                'lambda_t': self.heat_exchanger['lambda_t'],
+                'tube_side_fluid': self.heat_exchanger['tube_side_fluid'],
+                'shell_side_fluid': self.heat_exchanger['shell_side_fluid']
             }
+            # 计算换热面积（这里假设简单计算，后续可以考虑从数据库获取）
+            self.calculate_heat_exchanger_area()
         else:
             # 如果没有数据，使用默认值
+            self.heat_exchanger = None
             self.geometry_params = {
                 'd_i_original': 0.02,
                 'd_o': 0.025,
-                'lambda_t': 45.0
+                'lambda_t': 45.0,
+                'tube_side_fluid': '水',
+                'shell_side_fluid': '轻柴油'
             }
+            # 默认换热面积
+            self.heat_exchanger_area = 1.0
         
         # 初始化计算器
         self.lmtd_calc = LMTDCalculator()
@@ -48,6 +57,63 @@ class MainCalculator:
         """加载配置文件"""
         with open(self.config_file, 'r', encoding='utf-8') as f:
             return json.load(f)
+    
+    def calculate_heat_exchanger_area(self):
+        """计算换热面积"""
+        # 从换热器参数计算换热面积
+        # 假设：d_o是管外径，tube_section_count是管数
+        if self.heat_exchanger:
+            d_o = self.heat_exchanger['d_o']
+            tube_count = self.heat_exchanger['tube_section_count']
+            # 假设管长为4米（可以根据实际情况调整）
+            tube_length = 4.0
+            # 计算总面积
+            self.heat_exchanger_area = np.pi * d_o * tube_length * tube_count
+        else:
+            # 默认面积
+            self.heat_exchanger_area = 1.0
+    
+    def get_heat_exchanger_area(self):
+        """获取换热面积"""
+        return self.heat_exchanger_area
+    
+    def determine_hot_cold_sides(self):
+        """确定热侧和冷侧
+        返回值: (hot_side, cold_side)
+        """
+        # 根据工质类型确定热侧和冷侧
+        # 这里简单假设轻柴油为热侧，水为冷侧
+        # 实际应用中可能需要更复杂的逻辑
+        tube_fluid = self.geometry_params['tube_side_fluid']
+        shell_fluid = self.geometry_params['shell_side_fluid']
+        
+        if '柴油' in shell_fluid:
+            return ('SHELL', 'TUBE')
+        elif '水' in shell_fluid:
+            return ('TUBE', 'SHELL')
+        else:
+            # 默认假设管侧为热侧
+            return ('TUBE', 'SHELL')
+    
+    def get_temperature_map(self, operation_data):
+        """构建温度映射表，便于快速查找
+        返回值: {timestamp: {side: {points: temperature}}}
+        """
+        temp_map = {}
+        
+        for data in operation_data:
+            timestamp = data['timestamp']
+            side = data['side']
+            points = data['points']
+            temperature = data['temperature']
+            
+            if timestamp not in temp_map:
+                temp_map[timestamp] = {}
+            if side not in temp_map[timestamp]:
+                temp_map[timestamp][side] = {}
+            temp_map[timestamp][side][points] = temperature
+        
+        return temp_map
     
     def process_data_by_hour(self, day, hour):
         """处理指定天数和小时的数据"""
@@ -65,10 +131,14 @@ class MainCalculator:
             print(f"第{day}天第{hour}小时没有物理参数数据")
             return False
         
+        # 从测试数据库读取性能参数
+        performance_data = self.data_loader.get_performance_parameters_by_hour(day, hour)
+        if not performance_data:
+            print(f"第{day}天第{hour}小时没有性能参数数据")
+            return False
+        
         # 处理运行数据，计算物理参数
-        heat_exchangers = self.data_loader.get_all_heat_exchangers()
-        heat_exchanger = heat_exchangers[0] if heat_exchangers else None
-        processed_data = self.data_loader.process_operation_data(operation_data, physical_data, heat_exchanger)
+        processed_data = self.data_loader.process_operation_data(operation_data, physical_data, self.heat_exchanger)
         
         # 将运行参数插入到生产数据库
         if not self.data_loader.insert_operation_parameters(operation_data):
@@ -80,26 +150,65 @@ class MainCalculator:
             print("插入物理参数失败")
             return False
         
+        # 将性能参数插入到生产数据库
+        if not self.data_loader.insert_performance_parameters(performance_data):
+            print("插入性能参数失败")
+            return False
+        
+        # 构建温度映射表
+        temp_map = self.get_temperature_map(operation_data)
+        
+        # 构建性能参数映射表
+        performance_map = {}
+        for data in performance_data:
+            timestamp = data['timestamp']
+            if timestamp not in performance_map:
+                performance_map[timestamp] = {
+                    'heat_duty': data.get('heat_duty', 0)
+                }
+        
+        # 确定热侧和冷侧
+        hot_side, cold_side = self.determine_hot_cold_sides()
+        
+        # 计算每个时间戳的LMTD
+        lmtd_map = {}
+        for timestamp, temp_data in temp_map.items():
+            # 获取热侧温度（假设points=1为入口，points=2为出口）
+            T_h_in = temp_data.get(hot_side, {}).get(1, 0)
+            T_h_out = temp_data.get(hot_side, {}).get(2, 0)
+            
+            # 获取冷侧温度
+            T_c_in = temp_data.get(cold_side, {}).get(1, 0)
+            T_c_out = temp_data.get(cold_side, {}).get(2, 0)
+            
+            # 计算LMTD
+            if T_h_in > 0 and T_h_out > 0 and T_c_in > 0 and T_c_out > 0:
+                lmtd = self.lmtd_calc.calculate_lmtd(
+                    T_h_in, T_h_out, T_c_in, T_c_out, flow_type='counterflow'
+                )
+                lmtd_map[timestamp] = lmtd
+            else:
+                lmtd_map[timestamp] = 0
+        
         # 计算K_lmtd
         k_management_data = []
         for data in processed_data:
-            # 假设换热面积为1.0 m²
-            heat_exchanger_area = 1.0
+            timestamp = data['timestamp']
+            heat_exchanger_id = data['heat_exchanger_id']
             
-            # 假设传热量为1000 W
-            Q = 1000
+            # 获取传热量Q
+            Q = performance_map.get(timestamp, {}).get('heat_duty', 0)
             
-            # 计算LMTD
-            lmtd = self.lmtd_calc.calculate_lmtd(
-                data.get('temperature', 80),  # 假设热流体入口温度
-                data.get('temperature', 60),  # 假设热流体出口温度
-                data.get('temperature', 20),  # 假设冷流体入口温度
-                data.get('temperature', 40),  # 假设冷流体出口温度
-                flow_type='counterflow'
-            )
+            # 获取LMTD
+            lmtd = lmtd_map.get(timestamp, 0)
+            
+            # 获取换热面积
+            heat_exchanger_area = self.get_heat_exchanger_area()
             
             # 计算K_lmtd
-            k_lmtd = self.lmtd_calc.calculate_k_lmtd(Q, heat_exchanger_area, lmtd)
+            k_lmtd = 0
+            if Q > 0 and lmtd > 0 and heat_exchanger_area > 0:
+                k_lmtd = self.lmtd_calc.calculate_k_lmtd(Q, heat_exchanger_area, lmtd)
             
             # 构建K_management数据
             k_data = {
@@ -107,9 +216,9 @@ class MainCalculator:
                 'side': data['side'],
                 'day': day,
                 'hour': hour,
-                'timestamp': data['timestamp'],
+                'timestamp': timestamp,
                 'K_lmtd': k_lmtd,
-                'heat_exchanger_id': data['heat_exchanger_id']
+                'heat_exchanger_id': heat_exchanger_id
             }
             k_management_data.append(k_data)
         
