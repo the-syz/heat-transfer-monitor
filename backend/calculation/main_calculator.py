@@ -53,6 +53,20 @@ class MainCalculator:
         # 初始化计算器
         self.lmtd_calc = LMTDCalculator()
         self.nonlinear_calc = NonlinearRegressionCalculator(self.geometry_params)
+        
+        # 初始化阶段标志
+        self.stage = 1  # 1: 阶段1, 2: 阶段2
+        self.training_days = self.config.get('training_days', 20)
+        self.optimization_hours = self.config.get('optimization_hours', 3)
+        
+        # 初始化模型参数
+        self.model_params = None
+        
+        # 初始化训练数据
+        self.training_data = []
+        
+        # 获取所有换热器ID
+        self.heat_exchanger_ids = [he['id'] for he in heat_exchangers] if heat_exchangers else [1]
     
     def load_config(self):
         """加载配置文件"""
@@ -116,52 +130,12 @@ class MainCalculator:
         
         return temp_map
     
-    def process_data_by_hour(self, day, hour):
-        """处理指定天数和小时的数据"""
-        print(f"处理第{day}天第{hour}小时的数据...")
-        
-        # 从测试数据库读取运行参数
-        operation_data = self.data_loader.get_operation_parameters_by_hour(day, hour)
-        if not operation_data:
-            print(f"第{day}天第{hour}小时没有运行参数数据")
-            return False
-        
-        # 从测试数据库读取物理参数
-        physical_data = self.data_loader.get_physical_parameters_by_hour(day, hour)
-        if not physical_data:
-            print(f"第{day}天第{hour}小时没有物理参数数据")
-            return False
-        
-        # 从测试数据库读取性能参数
-        performance_data = self.data_loader.get_performance_parameters_by_hour(day, hour)
-        if not performance_data:
-            print(f"第{day}天第{hour}小时没有性能参数数据")
-            return False
-        
-        # 处理运行数据，计算物理参数
-        processed_data = self.data_loader.process_operation_data(operation_data, physical_data, self.heat_exchanger)
-        
-        # 将运行参数插入到生产数据库
-        if not self.data_loader.insert_operation_parameters(operation_data):
-            print("插入运行参数失败")
-            return False
-        
-        # 将物理参数插入到生产数据库
-        if not self.data_loader.insert_physical_parameters(processed_data):
-            print("插入物理参数失败")
-            return False
-        
+    def calculate_lmtd(self, operation_data):
+        """计算LMTD值
+        返回值: {timestamp: lmtd_value}
+        """
         # 构建温度映射表
         temp_map = self.get_temperature_map(operation_data)
-        
-        # 构建性能参数映射表（仅用于获取热负荷）
-        performance_map = {}
-        for data in test_performance_data:
-            timestamp = data['timestamp']
-            if timestamp not in performance_map:
-                performance_map[timestamp] = {
-                    'heat_duty': data.get('heat_duty', 0)
-                }
         
         # 确定热侧和冷侧
         hot_side, cold_side = self.determine_hot_cold_sides()
@@ -191,184 +165,44 @@ class MainCalculator:
             else:
                 lmtd_map[timestamp] = 0
         
-        # 计算K_lmtd
-        k_management_data = []
-        for data in processed_data:
-            timestamp = data['timestamp']
-            heat_exchanger_id = data['heat_exchanger_id']
-            
-            # 获取传热量Q
-            Q = performance_map.get(timestamp, {}).get('heat_duty', 0)
-            
-            # 获取LMTD
+        return lmtd_map
+    
+    def calculate_k_lmtd(self, heat_duty_map, lmtd_map):
+        """计算K_lmtd值
+        返回值: {timestamp: k_lmtd_value}
+        """
+        k_lmtd_map = {}
+        heat_exchanger_area = self.get_heat_exchanger_area()
+        
+        for timestamp, Q in heat_duty_map.items():
             lmtd = lmtd_map.get(timestamp, 0)
             
-            # 获取换热面积
-            heat_exchanger_area = self.get_heat_exchanger_area()
-            
-            # 计算K_lmtd
-            k_lmtd = 0
             # 确保所有值都不是None
             Q = Q or 0
             lmtd = lmtd or 0
             heat_exchanger_area = heat_exchanger_area or 0
+            
             if Q > 0 and lmtd > 0 and heat_exchanger_area > 0:
                 k_lmtd = self.lmtd_calc.calculate_k_lmtd(Q, heat_exchanger_area, lmtd)
-            
-            # 构建K_management数据
-            k_data = {
-                'points': data['points'],
-                'side': data['side'],
-                'timestamp': timestamp,
-                'K_lmtd': k_lmtd,
-                'heat_exchanger_id': heat_exchanger_id
-            }
-            k_management_data.append(k_data)
-        
-        # 将K_lmtd插入到生产数据库
-        if not self.data_loader.insert_k_management(k_management_data):
-            print("插入K_management失败")
-            return False
-        
-        # 构建K_lmtd映射表
-        k_lmtd_map = {}
-        for data in k_management_data:
-            key = (data['heat_exchanger_id'], data['timestamp'], data['points'], data['side'])
-            k_lmtd_map[key] = data['K_lmtd']
-        
-        # 构建性能参数数据
-        performance_data = []
-        
-        # 训练模型（简化版，使用当前小时的数据）
-        # 实际应用中应该使用历史数据训练
-        model_params = {'a': 0.02, 'p': 0.8, 'b': 0.0001}  # 默认模型参数
-        
-        for data in processed_data:
-            timestamp = data['timestamp']
-            heat_exchanger_id = data['heat_exchanger_id']
-            points = data['points']
-            side = data['side']
-            
-            # 获取K_lmtd
-            key = (heat_exchanger_id, timestamp, points, side)
-            K_lmtd = k_lmtd_map.get(key, 0)
-            
-            # 根据时间决定K值：每日前3小时使用K_LMTD，其余时间使用K_predict
-            K = K_lmtd
-            if hour is not None and hour >= 3:
-                # 使用非线性回归模型预测K值
-                Re = data.get('reynolds', 0)
-                K = self.nonlinear_calc.predict_K(Re, model_params['a'], model_params['p'], model_params['b'])
-            
-            # 计算alpha_i
-            Re = data.get('reynolds', 0)
-            alpha_i = self.nonlinear_calc.calculate_alpha_i(model_params['a'], model_params['p'], Re)
-            
-            # 从测试数据库获取alpha_o（按相同点、时间戳和换热器ID）
-            alpha_o = alpha_o_map.get(key, None)
-            
-            # 如果测试数据库中没有alpha_o，使用计算值
-            if alpha_o is None:
-                alpha_o = self.nonlinear_calc.calculate_alpha_o(data)
-            
-            # 获取热负荷
-            heat_duty = performance_map.get(timestamp, {}).get('heat_duty', 0)
-            
-            # 构建性能参数数据
-            performance_entry = {
-                'points': points,
-                'side': side,
-                'timestamp': timestamp,
-                'heat_duty': heat_duty,
-                'alpha_i': alpha_i,
-                'alpha_o': alpha_o,
-                'K': K,
-                'heat_exchanger_id': heat_exchanger_id
-            }
-            
-            performance_data.append(performance_entry)
-        
-        # 将性能参数插入到生产数据库
-        if not self.data_loader.insert_performance_parameters(performance_data):
-            print("插入性能参数失败")
-            return False
-        
-        # 构建温度映射表
-        temp_map = self.get_temperature_map(operation_data)
-        
-        # 构建性能参数映射表
-        performance_map = {}
-        for data in performance_data:
-            timestamp = data['timestamp']
-            if timestamp not in performance_map:
-                performance_map[timestamp] = {
-                    'heat_duty': data.get('heat_duty', 0)
-                }
-        
-        # 确定热侧和冷侧
-        hot_side, cold_side = self.determine_hot_cold_sides()
-        
-        # 计算每个时间戳的LMTD
-        lmtd_map = {}
-        for timestamp, temp_data in temp_map.items():
-            # 获取热侧温度（假设points=1为入口，points=2为出口）
-            T_h_in = temp_data.get(hot_side, {}).get(1, 0) or 0
-            T_h_out = temp_data.get(hot_side, {}).get(2, 0) or 0
-            
-            # 获取冷侧温度
-            T_c_in = temp_data.get(cold_side, {}).get(1, 0) or 0
-            T_c_out = temp_data.get(cold_side, {}).get(2, 0) or 0
-            
-            # 计算LMTD
-            if T_h_in > 0 and T_h_out > 0 and T_c_in > 0 and T_c_out > 0:
-                lmtd = self.lmtd_calc.calculate_lmtd(
-                    T_h_in, T_h_out, T_c_in, T_c_out, flow_type='counterflow'
-                )
-                lmtd_map[timestamp] = lmtd
+                k_lmtd_map[timestamp] = k_lmtd
             else:
-                lmtd_map[timestamp] = 0
+                k_lmtd_map[timestamp] = 0
         
-        # 计算K_lmtd
-        k_management_data = []
-        for data in processed_data:
-            timestamp = data['timestamp']
-            heat_exchanger_id = data['heat_exchanger_id']
-            
-            # 获取传热量Q
-            Q = performance_map.get(timestamp, {}).get('heat_duty', 0)
-            
-            # 获取LMTD
-            lmtd = lmtd_map.get(timestamp, 0)
-            
-            # 获取换热面积
-            heat_exchanger_area = self.get_heat_exchanger_area()
-            
-            # 计算K_lmtd
-            k_lmtd = 0
-            if Q > 0 and lmtd > 0 and heat_exchanger_area > 0:
-                k_lmtd = self.lmtd_calc.calculate_k_lmtd(Q, heat_exchanger_area, lmtd)
-            
-            # 构建K_management数据
-            k_data = {
-                'points': data['points'],
-                'side': data['side'],
-                'timestamp': timestamp,
-                'K_lmtd': k_lmtd,
-                'heat_exchanger_id': heat_exchanger_id
-            }
-            k_management_data.append(k_data)
-        
-        # 将K_lmtd插入到生产数据库
-        if not self.data_loader.insert_k_management(k_management_data):
-            print("插入K_management失败")
-            return False
-        
-        print(f"第{day}天第{hour}小时的数据处理完成")
-        return True
+        return k_lmtd_map
     
-    def train_model(self, training_data):
-        """训练非线性回归模型"""
-        print("开始训练非线性回归模型...")
+    def train_stage1(self):
+        """执行阶段1训练：使用training_days天的数据进行初始拟合"""
+        print(f"开始阶段1训练，使用{self.training_days}天的数据...")
+        
+        # 获取阶段1训练数据
+        training_data = self.data_loader.get_training_data_for_stage1(self.training_days)
+        
+        # 过滤tube侧数据
+        training_data = [data for data in training_data if data['side'] == 'TUBE']
+        
+        if not training_data:
+            print("阶段1训练数据为空")
+            return None
         
         # 使用stage1进行初始拟合
         a, p, b = self.nonlinear_calc.get_optimized_parameters(
@@ -377,69 +211,248 @@ class MainCalculator:
             adaptive_strategy='dynamic'
         )
         
+        # 将训练得到的参数作为这些天的训练得到的参数
+        self.model_params = {'a': a, 'p': p, 'b': b}
+        
+        # 将模型参数插入到model_parameters表
+        self.data_loader.insert_model_parameters(self.model_params, stage='stage1')
+        
+        print(f"阶段1训练完成，参数: a={a:.6f}, p={p:.6f}, b={b:.6f}")
+        return self.model_params
+    
+    def train_stage2(self, optimization_data):
+        """执行阶段2训练：使用新数据进行优化"""
+        print(f"开始阶段2训练，使用{len(optimization_data)}条数据...")
+        
+        # 过滤tube侧数据
+        optimization_data = [data for data in optimization_data if data['side'] == 'TUBE']
+        
+        if not optimization_data:
+            print("阶段2训练数据为空")
+            return self.model_params
+        
         # 使用stage2进行精确优化
         a_opt, p_opt, b_opt = self.nonlinear_calc.get_optimized_parameters(
-            training_data, 
-            initial_params=[a, p, b],
+            optimization_data, 
+            initial_params=[self.model_params['a'], self.model_params['p'], self.model_params['b']],
             stage='stage2',
             adaptive_strategy='dynamic'
         )
         
-        print(f"模型训练完成，参数: a={a_opt:.6f}, p={p_opt:.6f}, b={b_opt:.6f}")
-        return {'a': a_opt, 'p': p_opt, 'b': b_opt}
+        # 更新模型参数
+        self.model_params = {'a': a_opt, 'p': p_opt, 'b': b_opt}
+        
+        # 将模型参数插入到model_parameters表
+        self.data_loader.insert_model_parameters(self.model_params, stage='stage2')
+        
+        print(f"阶段2训练完成，参数: a={a_opt:.6f}, p={p_opt:.6f}, b={b_opt:.6f}")
+        return self.model_params
     
-    def predict_performance(self, data, model_params):
-        """预测换热器性能"""
-        results = []
+    def predict_k_and_alpha_i(self, data):
+        """预测K值和alpha_i值
+        返回值: (k_predicted_map, alpha_i_map)
+        """
+        k_predicted_map = {}
+        alpha_i_map = {}
         
         for record in data:
-            # 获取模型参数
-            a = model_params['a']
-            p = model_params['p']
-            b = model_params['b']
+            if record['side'] != 'TUBE':
+                continue
             
-            # 计算雷诺数Re（如果record中没有或无效）
-            reynolds = record.get('reynolds_number')
-            if reynolds is None or reynolds <= 0:
-                d_i = self.geometry_params['d_i_original']
-                rho = record.get('density', 1000) or 0
-                u = record.get('velocity', 0) or 0
-                mu = record.get('viscosity', 0.001) or 0
+            timestamp = record['timestamp']
+            points = record['points']
+            heat_exchanger_id = record['heat_exchanger_id']
+            Re = record.get('reynolds', 0)
+            
+            if Re > 0 and self.model_params:
+                # 预测K值
+                K_pred = self.nonlinear_calc.predict_K(Re, self.model_params['a'], self.model_params['p'], self.model_params['b'])
+                k_predicted_map[(heat_exchanger_id, timestamp, points)] = K_pred
                 
-                if u > 0 and mu > 0:
-                    Re = rho * u * d_i / mu
-                else:
-                    Re = 10000  # 默认值
-            else:
-                Re = reynolds
-            
-            # 预测K值
-            K_pred = self.nonlinear_calc.predict_K(Re, a, p, b)
-            
-            # 使用合理的默认值计算alpha_i
-            alpha_i = self.nonlinear_calc.calculate_alpha_i(a, p, Re)
-            
-            # 计算alpha_o（从record中获取或使用默认值）
-            alpha_o = self.nonlinear_calc.calculate_alpha_o(record)
-            
-            # 计算结垢热阻
-            fouling_resistance = self.nonlinear_calc.calculate_fouling_resistance(record['day'])
-            
-            # 构建结果
-            result = {
-                'points': record['points'],
-                'side': record['side'],
-                'timestamp': record['timestamp'],
-                'K_predicted': K_pred,
-                'alpha_i': alpha_i,
-                'alpha_o': alpha_o,
-                'fouling_resistance': fouling_resistance,
-                'heat_exchanger_id': record.get('heat_exchanger_id', 1)
-            }
-            
-            results.append(result)
+                # 计算alpha_i
+                alpha_i = 1 / (self.model_params['a'] * np.power(Re, -self.model_params['p']))
+                alpha_i_map[(heat_exchanger_id, timestamp, points)] = alpha_i
         
-        return results
+        return k_predicted_map, alpha_i_map
+    
+    def process_data_by_hour(self, day, hour):
+        """处理指定天数和小时的数据，按照用户指定的8步流程执行"""
+        print(f"处理第{day}天第{hour}小时的数据...")
+        
+        # 步骤1: 读取运行参数全表（operation_parameters）
+        operation_data = self.data_loader.get_operation_parameters_by_hour(day, hour)
+        if not operation_data:
+            print(f"第{day}天第{hour}小时没有运行参数数据")
+            return False
+        
+        # 将运行参数插入到生产数据库
+        if not self.data_loader.insert_operation_parameters(operation_data):
+            print("插入运行参数失败")
+            return False
+        
+        # 步骤2: 计算物理参数、雷诺数和普朗特数
+        processed_data = self.data_loader.process_operation_data(operation_data, None, self.heat_exchanger)
+        
+        # 过滤tube侧数据
+        processed_data = [data for data in processed_data if data['side'] == 'TUBE']
+        
+        if not processed_data:
+            print(f"第{day}天第{hour}小时没有tube侧物理参数数据")
+            return False
+        
+        # 将物理参数插入到生产数据库
+        if not self.data_loader.insert_physical_parameters(processed_data):
+            print("插入物理参数失败")
+            return False
+        
+        # 步骤3: 读取测试数据库中的性能参数，填入k_management和performance_parameters
+        test_performance_data = self.data_loader.get_test_performance_parameters_by_hour(day, hour)
+        
+        # 构建测试性能参数映射表
+        test_performance_map = {}
+        for data in test_performance_data:
+            key = (data['heat_exchanger_id'], data['timestamp'], data['points'], data['side'])
+            test_performance_map[key] = {
+                'K_actual': data.get('K', 0),
+                'alpha_o': data.get('alpha_o', 0)
+            }
+        
+        # 构建k_management数据和performance_parameters数据
+        k_management_data = []
+        performance_data = []
+        
+        # 步骤4: 计算LMTD和K_lmtd
+        # 构建温度映射表
+        temp_map = self.get_temperature_map(operation_data)
+        
+        # 构建热负荷映射表
+        heat_duty_map = {}
+        for data in test_performance_data:
+            heat_duty_map[data['timestamp']] = data.get('heat_duty', 0)
+        
+        # 计算LMTD
+        lmtd_map = self.calculate_lmtd(operation_data)
+        
+        # 计算K_lmtd
+        k_lmtd_map = self.calculate_k_lmtd(heat_duty_map, lmtd_map)
+        
+        for data in processed_data:
+            timestamp = data['timestamp']
+            heat_exchanger_id = data['heat_exchanger_id']
+            points = data['points']
+            side = data['side']
+            
+            # 获取测试数据库中的K_actual和alpha_o
+            test_key = (heat_exchanger_id, timestamp, points, side)
+            K_actual = test_performance_map.get(test_key, {}).get('K_actual', 0)
+            alpha_o = test_performance_map.get(test_key, {}).get('alpha_o', 0)
+            
+            # 获取LMTD和K_lmtd
+            lmtd = lmtd_map.get(timestamp, 0)
+            K_lmtd = k_lmtd_map.get(timestamp, 0)
+            
+            # 构建k_management数据
+            k_data = {
+                'points': points,
+                'side': side,
+                'timestamp': timestamp,
+                'K_actual': K_actual,
+                'K_lmtd': K_lmtd,
+                'heat_exchanger_id': heat_exchanger_id
+            }
+            k_management_data.append(k_data)
+            
+            # 构建performance_parameters数据
+            performance_entry = {
+                'points': points,
+                'side': side,
+                'timestamp': timestamp,
+                'heat_duty': heat_duty_map.get(timestamp, 0),
+                'LMTD': lmtd,
+                'alpha_o': alpha_o,
+                'heat_exchanger_id': heat_exchanger_id
+            }
+            performance_data.append(performance_entry)
+        
+        # 将k_management数据插入到生产数据库
+        if not self.data_loader.insert_k_management(k_management_data):
+            print("插入K_management失败")
+            return False
+        
+        # 步骤5: 阶段1训练（如果还没有训练）
+        if self.stage == 1 and not self.model_params:
+            self.train_stage1()
+            self.stage = 2
+        
+        # 步骤6: 计算K_predicted和alpha_i
+        if self.model_params:
+            k_predicted_map, alpha_i_map = self.predict_k_and_alpha_i(processed_data)
+            
+            # 更新k_management数据，添加K_predicted
+            for data in k_management_data:
+                key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
+                data['K_predicted'] = k_predicted_map.get(key, 0)
+            
+            # 更新k_management表
+            self.data_loader.update_k_management_with_predicted(k_management_data)
+            
+            # 更新performance_parameters数据，添加alpha_i
+            for data in performance_data:
+                key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
+                data['alpha_i'] = alpha_i_map.get(key, 0)
+        
+        # 步骤7: 阶段2优化（如果满足条件）
+        new_data_count = self.data_loader.get_new_data_count_for_stage2(day, self.optimization_hours)
+        if self.stage == 2 and new_data_count >= self.optimization_hours:
+            # 获取优化数据
+            optimization_data = self.data_loader.get_optimization_data_for_stage2(day, self.optimization_hours)
+            # 执行阶段2训练
+            self.train_stage2(optimization_data)
+            # 重新计算K_predicted和alpha_i
+            k_predicted_map, alpha_i_map = self.predict_k_and_alpha_i(processed_data)
+            
+            # 更新k_management数据
+            for data in k_management_data:
+                key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
+                data['K_predicted'] = k_predicted_map.get(key, 0)
+            
+            # 更新k_management表
+            self.data_loader.update_k_management_with_predicted(k_management_data)
+            
+            # 更新performance_parameters数据
+            for data in performance_data:
+                key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
+                data['alpha_i'] = alpha_i_map.get(key, 0)
+        
+        # 步骤8: 填写performance_parameters中的K值
+        for data in performance_data:
+            # 获取K_actual和K_predicted
+            key = (data['heat_exchanger_id'], data['timestamp'], data['points'], data['side'])
+            K_actual = test_performance_map.get(key, {}).get('K_actual', 0)
+            
+            # 构建k_management查询键
+            k_key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
+            K_predicted = k_predicted_map.get(k_key, 0) if self.model_params else 0
+            
+            # 阶段1优化中的所有K值按K_actual写
+            if self.stage == 1:
+                data['K'] = K_actual
+            # 阶段2中optimization_hours前的K用K_actual，该天其他时间用K_predicted
+            else:
+                # 获取当前小时
+                current_hour = hour
+                if current_hour < self.optimization_hours:
+                    data['K'] = K_actual
+                else:
+                    data['K'] = K_predicted
+        
+        # 将performance_parameters数据插入到生产数据库
+        if not self.data_loader.insert_performance_parameters(performance_data):
+            print("插入性能参数失败")
+            return False
+        
+        print(f"第{day}天第{hour}小时的数据处理完成")
+        return True
     
     def run_calculation(self, day, hour):
         """运行完整的计算流程"""
@@ -448,6 +461,21 @@ class MainCalculator:
             return False
         
         return True
+    
+    def calculate_heat_exchanger_area(self):
+        """计算换热面积"""
+        # 从换热器参数计算换热面积
+        # 假设：d_o是管外径，tube_section_count是管数
+        if self.heat_exchanger:
+            d_o = self.heat_exchanger['d_o']
+            tube_count = self.heat_exchanger['tube_section_count']
+            # 假设管长为4米（可以根据实际情况调整）
+            tube_length = 4.0
+            # 计算总面积
+            self.heat_exchanger_area = np.pi * d_o * tube_length * tube_count
+        else:
+            # 默认面积
+            self.heat_exchanger_area = 1.0
     
     def close(self):
         """关闭数据库连接"""
