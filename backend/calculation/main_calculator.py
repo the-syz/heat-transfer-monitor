@@ -468,13 +468,27 @@ class MainCalculator:
             p = model_params['p']
             b = model_params['b']
             
+            # 计算雷诺数Re（如果record中没有）
+            if 'reynolds_number' not in record or record['reynolds_number'] <= 0:
+                d_i = self.geometry_params['d_i_original']
+                rho = record.get('density', 1000)
+                u = record.get('velocity', 0)
+                mu = record.get('viscosity', 0.001)
+                
+                if u > 0 and mu > 0:
+                    Re = rho * u * d_i / mu
+                else:
+                    Re = 10000  # 默认值
+            else:
+                Re = record['reynolds_number']
+            
             # 预测K值
-            K_pred = self.nonlinear_calc.predict_K(record['reynolds_number'], a, p, b)
+            K_pred = self.nonlinear_calc.predict_K(Re, a, p, b)
             
-            # 计算alpha_i
-            alpha_i = self.nonlinear_calc.calculate_alpha_i(a, p, record['reynolds_number'])
+            # 使用合理的默认值计算alpha_i
+            alpha_i = self.nonlinear_calc.calculate_alpha_i(a, p, Re)
             
-            # 计算alpha_o
+            # 计算alpha_o（从record中获取或使用默认值）
             alpha_o = self.nonlinear_calc.calculate_alpha_o(record)
             
             # 计算结垢热阻
