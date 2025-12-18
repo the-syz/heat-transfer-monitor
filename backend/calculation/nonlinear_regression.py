@@ -276,11 +276,19 @@ class NonlinearRegressionCalculator:
         根据优化的参数预测传热系数K
         """
         try:
-            # 获取或计算Re
-            if 'reynolds_number' in record and record['reynolds_number'] > 0:
-                Re = record['reynolds_number']
-            elif 'Re' in record and record['Re'] > 0:
-                Re = record['Re']
+            # 从记录中获取雷诺数Re
+        if 'reynolds_number' in record:
+            Re = record['reynolds_number']
+            if Re is not None and Re > 0:
+                pass
+            else:
+                Re = None
+        elif 'Re' in record:
+            Re = record['Re']
+            if Re is not None and Re > 0:
+                pass
+            else:
+                Re = None
             else:
                 # 计算Re
                 d_i = self.geometry.get('d_i_original', 0.02)
