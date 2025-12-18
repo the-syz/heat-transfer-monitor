@@ -10,6 +10,20 @@ class NonlinearRegressionCalculator:
     """
     def __init__(self, geometry_params):
         self.geometry = geometry_params
+        # 如果没有提供换热面积A，尝试根据其他参数计算
+        if 'A' not in self.geometry:
+            self.calculate_heat_exchanger_area()
+    
+    def calculate_heat_exchanger_area(self):
+        """根据换热器参数计算换热面积
+        与MainCalculator中的方法保持一致
+        """
+        d_o = self.geometry.get('d_o', 0.025)
+        tube_count = self.geometry.get('tube_section_count', 100)  # 默认100根管子
+        tube_length = 4.0  # 假设管长为4米
+        
+        # 计算总面积
+        self.geometry['A'] = np.pi * d_o * tube_length * tube_count
     
     def model_func(self, x, a, p, b):
         """改进的模型函数：Y = a * x^(-p) + b
