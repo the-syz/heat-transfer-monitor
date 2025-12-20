@@ -228,9 +228,11 @@ class DataLoader:
         
         # 构建物理参数映射，方便查找
         physical_map = {}
-        for p_data in physical_data:
-            key = (p_data['points'], p_data['side'])
-            physical_map[key] = p_data
+        # 处理physical_data为None的情况
+        if physical_data:
+            for p_data in physical_data:
+                key = (p_data['points'], p_data['side'])
+                physical_map[key] = p_data
         
         # 获取管径，默认0.02m
         d_i = heat_exchanger.get('d_i_original', 0.02) if heat_exchanger else 0.02
