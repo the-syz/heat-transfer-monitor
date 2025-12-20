@@ -20,7 +20,7 @@ class DatabaseConnection:
     def connect_test_db(self):
         """连接到测试数据库"""
         try:
-            db_config = self.config['database']['test_db']
+            db_config = self.config['database']['test']
             self.test_db = mysql.connector.connect(
                 host=db_config['host'],
                 port=db_config['port'],
