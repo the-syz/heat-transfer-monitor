@@ -285,6 +285,17 @@ class MainCalculator:
             print(f"第{day}天第{hour}小时没有运行参数数据")
             return False
         
+        # 调试：查看运行数据的结构
+        print(f"运行数据数量: {len(operation_data)}")
+        if operation_data:
+            print(f"第一条运行数据: {operation_data[0]}")
+            # 统计不同side的值
+            side_counts = {}
+            for data in operation_data:
+                side = data.get('side', '未知')
+                side_counts[side] = side_counts.get(side, 0) + 1
+            print(f"不同side的值统计: {side_counts}")
+        
         # 将运行参数插入到生产数据库
         if not self.data_loader.insert_operation_parameters(operation_data):
             print("插入运行参数失败")
@@ -293,12 +304,15 @@ class MainCalculator:
         # 步骤2: 计算物理参数、雷诺数和普朗特数
         # 先尝试从测试数据库读取物理参数
         physical_data = self.data_loader.get_physical_parameters_by_hour(day, hour)
+        print(f"读取到的物理参数数量: {len(physical_data) if physical_data else 0}")
         
         # 计算物理参数
         processed_data = self.data_loader.process_operation_data(operation_data, physical_data, self.heat_exchanger)
+        print(f"处理后的数据数量: {len(processed_data)}")
         
         # 过滤tube侧数据
-        processed_data = [data for data in processed_data if data['side'] == 'TUBE']
+        processed_data = [data for data in processed_data if data.get('side') == 'TUBE']
+        print(f"过滤后tube侧数据数量: {len(processed_data)}")
         
         if not processed_data:
             print(f"第{day}天第{hour}小时没有tube侧物理参数数据")
