@@ -39,7 +39,7 @@ class DatabaseConnection:
     def connect_prod_db(self):
         """连接到生产数据库"""
         try:
-            db_config = self.config['database']['prod_db']
+            db_config = self.config['database']['production']
             self.prod_db = mysql.connector.connect(
                 host=db_config['host'],
                 port=db_config['port'],
