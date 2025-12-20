@@ -142,7 +142,7 @@ def main_processing():
         
         # 2. 执行数据处理
         logger.info(f"执行数据处理流程 - 第{current_day}天第{current_hour}小时")
-        success = calculator.process_data_by_hour(current_day, current_hour, stage1_train=False, stage2_train=False)
+        success = calculator.process_data_by_hour(current_day, current_hour)
         
         if success:
             logger.info(f"数据处理成功 - 第{current_day}天第{current_hour}小时")
