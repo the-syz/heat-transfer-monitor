@@ -291,7 +291,11 @@ class MainCalculator:
             return False
         
         # 步骤2: 计算物理参数、雷诺数和普朗特数
-        processed_data = self.data_loader.process_operation_data(operation_data, None, self.heat_exchanger)
+        # 先尝试从测试数据库读取物理参数
+        physical_data = self.data_loader.get_physical_parameters_by_hour(day, hour)
+        
+        # 计算物理参数
+        processed_data = self.data_loader.process_operation_data(operation_data, physical_data, self.heat_exchanger)
         
         # 过滤tube侧数据
         processed_data = [data for data in processed_data if data['side'] == 'TUBE']
