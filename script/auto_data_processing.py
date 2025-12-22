@@ -174,10 +174,9 @@ def main_processing():
             current_hour = 0
             current_day += 1
             
-        # 限制总天数
-        if current_day > config["total_hours"]:
-            logger.info("已完成所有天数的数据处理，脚本结束")
-            sys.exit(0)
+        # 取消天数限制，让脚本可以一直运行
+        # logger.info("已完成所有天数的数据处理，脚本结束")
+        # sys.exit(0)
             
     except Exception as e:
         logger.error(f"主处理函数异常: {e}", exc_info=True)
