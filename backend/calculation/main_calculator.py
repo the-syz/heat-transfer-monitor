@@ -388,6 +388,13 @@ class MainCalculator:
             print(f"天数已达到{day}天，触发阶段1训练")
             self.train_stage1()
             self.stage = 2
+            print("阶段1训练完成，开始重新处理之前所有天数的数据，以更新输出文件...")
+            # 重新处理从第1天到当前天的数据
+            for reprocess_day in range(1, day + 1):
+                for reprocess_hour in range(24):
+                    print(f"重新处理第{reprocess_day}天第{reprocess_hour}小时的数据...")
+                    self.process_data_by_hour(reprocess_day, reprocess_hour)
+            print("所有历史数据重新处理完成")
         
         # 步骤6: 计算K_predicted和alpha_i
         # 初始化alpha_i_map，避免后续使用时出错
