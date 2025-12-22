@@ -7,7 +7,7 @@ import sys
 from datetime import datetime
 
 # 添加backend目录到Python路径
-sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../'))
 
 from db.db_connection import DatabaseConnection
 from calculation.main_calculator import MainCalculator
@@ -29,7 +29,7 @@ app.add_middleware(
 )
 
 # 加载配置
-CONFIG_FILE = "config/config.json"
+CONFIG_FILE = "../config/config.json"
 with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
     config = json.load(f)
 
@@ -70,11 +70,24 @@ async def get_operation_parameters(heat_exchanger_id: int = None, day: int = Non
         if heat_exchanger_id:
             query += " AND heat_exchanger_id = %s"
             params.append(heat_exchanger_id)
+        
+        # 处理day和hour参数，转换为timestamp范围查询
         if day:
-            query += " AND day = %s"
-            params.append(day)
-        if hour:
-            query += " AND hour = %s"
+            if hour is not None:
+                # 查询特定天和小时的数据
+                start_time = f"2022-01-{day:02d} {hour:02d}:00:00"
+                end_time = f"2022-01-{day:02d} {hour:02d}:59:59"
+                query += " AND timestamp BETWEEN %s AND %s"
+                params.extend([start_time, end_time])
+            else:
+                # 查询特定天的数据
+                start_time = f"2022-01-{day:02d} 00:00:00"
+                end_time = f"2022-01-{day:02d} 23:59:59"
+                query += " AND timestamp BETWEEN %s AND %s"
+                params.extend([start_time, end_time])
+        elif hour is not None:
+            # 只查询特定小时的数据（所有天）
+            query += " AND HOUR(timestamp) = %s"
             params.append(hour)
         
         # 执行查询
@@ -100,11 +113,24 @@ async def get_physical_parameters(heat_exchanger_id: int = None, day: int = None
         if heat_exchanger_id:
             query += " AND heat_exchanger_id = %s"
             params.append(heat_exchanger_id)
+        
+        # 处理day和hour参数，转换为timestamp范围查询
         if day:
-            query += " AND day = %s"
-            params.append(day)
-        if hour:
-            query += " AND hour = %s"
+            if hour is not None:
+                # 查询特定天和小时的数据
+                start_time = f"2022-01-{day:02d} {hour:02d}:00:00"
+                end_time = f"2022-01-{day:02d} {hour:02d}:59:59"
+                query += " AND timestamp BETWEEN %s AND %s"
+                params.extend([start_time, end_time])
+            else:
+                # 查询特定天的数据
+                start_time = f"2022-01-{day:02d} 00:00:00"
+                end_time = f"2022-01-{day:02d} 23:59:59"
+                query += " AND timestamp BETWEEN %s AND %s"
+                params.extend([start_time, end_time])
+        elif hour is not None:
+            # 只查询特定小时的数据（所有天）
+            query += " AND HOUR(timestamp) = %s"
             params.append(hour)
         
         # 执行查询
@@ -130,11 +156,24 @@ async def get_k_management(heat_exchanger_id: int = None, day: int = None, hour:
         if heat_exchanger_id:
             query += " AND heat_exchanger_id = %s"
             params.append(heat_exchanger_id)
+        
+        # 处理day和hour参数，转换为timestamp范围查询
         if day:
-            query += " AND day = %s"
-            params.append(day)
-        if hour:
-            query += " AND hour = %s"
+            if hour is not None:
+                # 查询特定天和小时的数据
+                start_time = f"2022-01-{day:02d} {hour:02d}:00:00"
+                end_time = f"2022-01-{day:02d} {hour:02d}:59:59"
+                query += " AND timestamp BETWEEN %s AND %s"
+                params.extend([start_time, end_time])
+            else:
+                # 查询特定天的数据
+                start_time = f"2022-01-{day:02d} 00:00:00"
+                end_time = f"2022-01-{day:02d} 23:59:59"
+                query += " AND timestamp BETWEEN %s AND %s"
+                params.extend([start_time, end_time])
+        elif hour is not None:
+            # 只查询特定小时的数据（所有天）
+            query += " AND HOUR(timestamp) = %s"
             params.append(hour)
         
         # 执行查询
@@ -160,11 +199,24 @@ async def get_performance(heat_exchanger_id: int = None, day: int = None, hour: 
         if heat_exchanger_id:
             query += " AND heat_exchanger_id = %s"
             params.append(heat_exchanger_id)
+        
+        # 处理day和hour参数，转换为timestamp范围查询
         if day:
-            query += " AND day = %s"
-            params.append(day)
-        if hour:
-            query += " AND hour = %s"
+            if hour is not None:
+                # 查询特定天和小时的数据
+                start_time = f"2022-01-{day:02d} {hour:02d}:00:00"
+                end_time = f"2022-01-{day:02d} {hour:02d}:59:59"
+                query += " AND timestamp BETWEEN %s AND %s"
+                params.extend([start_time, end_time])
+            else:
+                # 查询特定天的数据
+                start_time = f"2022-01-{day:02d} 00:00:00"
+                end_time = f"2022-01-{day:02d} 23:59:59"
+                query += " AND timestamp BETWEEN %s AND %s"
+                params.extend([start_time, end_time])
+        elif hour is not None:
+            # 只查询特定小时的数据（所有天）
+            query += " AND HOUR(timestamp) = %s"
             params.append(hour)
         
         # 执行查询

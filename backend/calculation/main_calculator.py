@@ -383,12 +383,15 @@ class MainCalculator:
             print("插入K_management失败")
             return False
         
-        # 步骤5: 阶段1训练（如果还没有训练）
-        if self.stage == 1 and not self.model_params:
+        # 步骤5: 阶段1训练（当天数首次达到training_days参数值时触发）
+        if self.stage == 1 and not self.model_params and day >= self.training_days:
+            print(f"天数已达到{day}天，触发阶段1训练")
             self.train_stage1()
             self.stage = 2
         
         # 步骤6: 计算K_predicted和alpha_i
+        # 初始化alpha_i_map，避免后续使用时出错
+        alpha_i_map = {}
         if self.model_params:
             k_predicted_map, alpha_i_map = self.predict_k_and_alpha_i(processed_data)
             
@@ -399,34 +402,40 @@ class MainCalculator:
             
             # 更新k_management表
             self.data_loader.update_k_management_with_predicted(k_management_data)
-            
-            # 更新performance_parameters数据，添加alpha_i
-            for data in performance_data:
-                key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
-                data['alpha_i'] = alpha_i_map.get(key, 0)
         
-        # 步骤7: 阶段2优化（如果满足条件）
-        new_data_count = self.data_loader.get_new_data_count_for_stage2(day, self.optimization_hours)
-        if self.stage == 2 and new_data_count >= self.optimization_hours:
-            # 获取优化数据
-            optimization_data = self.data_loader.get_optimization_data_for_stage2(day, self.optimization_hours)
-            # 执行阶段2训练
-            self.train_stage2(optimization_data)
-            # 重新计算K_predicted和alpha_i
-            k_predicted_map, alpha_i_map = self.predict_k_and_alpha_i(processed_data)
-            
-            # 更新k_management数据
-            for data in k_management_data:
-                key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
-                data['K_predicted'] = k_predicted_map.get(key, 0)
-            
-            # 更新k_management表
-            self.data_loader.update_k_management_with_predicted(k_management_data)
-            
-            # 更新performance_parameters数据
-            for data in performance_data:
-                key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
-                data['alpha_i'] = alpha_i_map.get(key, 0)
+        # 确保为所有performance_data添加alpha_i字段，即使没有model_params
+        for data in performance_data:
+            key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
+            data['alpha_i'] = alpha_i_map.get(key, 0)  # 默认为0，如果没有计算值
+        
+        # 步骤7: 阶段2优化（阶段1训练完成后，以天为单位进行）
+        # 只有在完成阶段1训练后，才考虑阶段2训练
+        if self.stage == 2:
+            # 每天只执行一次阶段2训练，在该天的最后一个小时（23点）执行
+            if hour == 23:  # 假设每天24小时，最后一个小时是23点
+                print(f"第{day}天结束，触发阶段2训练")
+                # 获取当天的优化数据
+                optimization_data = self.data_loader.get_optimization_data_for_stage2(day, 24)  # 使用全天24小时的数据
+                if optimization_data:
+                    # 执行阶段2训练
+                    self.train_stage2(optimization_data)
+                    # 重新计算K_predicted和alpha_i
+                    k_predicted_map, alpha_i_map = self.predict_k_and_alpha_i(processed_data)
+                    
+                    # 更新k_management数据
+                    for data in k_management_data:
+                        key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
+                        data['K_predicted'] = k_predicted_map.get(key, 0)
+                    
+                    # 更新k_management表
+                    self.data_loader.update_k_management_with_predicted(k_management_data)
+                    
+                    # 更新performance_parameters数据
+                    for data in performance_data:
+                        key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
+                        data['alpha_i'] = alpha_i_map.get(key, 0)
+                else:
+                    print(f"第{day}天没有足够的优化数据，跳过阶段2训练")
         
         # 步骤8: 填写performance_parameters中的K值
         for data in performance_data:

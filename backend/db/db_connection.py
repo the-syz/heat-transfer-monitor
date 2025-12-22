@@ -20,7 +20,12 @@ class DatabaseConnection:
     def connect_test_db(self):
         """连接到测试数据库"""
         try:
-            db_config = self.config['database']['test']
+            # 支持两种配置键名：test 和 test_db
+            if 'test' in self.config['database']:
+                db_config = self.config['database']['test']
+            else:
+                db_config = self.config['database']['test_db']
+            
             self.test_db = mysql.connector.connect(
                 host=db_config['host'],
                 port=db_config['port'],
@@ -39,7 +44,12 @@ class DatabaseConnection:
     def connect_prod_db(self):
         """连接到生产数据库"""
         try:
-            db_config = self.config['database']['production']
+            # 支持两种配置键名：production 和 prod_db
+            if 'production' in self.config['database']:
+                db_config = self.config['database']['production']
+            else:
+                db_config = self.config['database']['prod_db']
+            
             self.prod_db = mysql.connector.connect(
                 host=db_config['host'],
                 port=db_config['port'],

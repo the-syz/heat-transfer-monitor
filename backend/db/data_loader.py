@@ -130,14 +130,17 @@ class DataLoader:
             return False
     
     def insert_performance_parameters(self, data):
-        """将性能参数插入到生产数据库"""
+        """将性能参数插入到生产数据库，遇到重复键时更新现有记录"""
         if not data:
             return True
         
-        # 构建插入语句
+        # 构建插入语句，使用ON DUPLICATE KEY UPDATE避免重复键错误
         columns = ', '.join(data[0].keys())
         placeholders = ', '.join(['%s'] * len(data[0]))
-        query = f"INSERT INTO performance_parameters ({columns}) VALUES ({placeholders})"
+        
+        # 构建ON DUPLICATE KEY UPDATE子句
+        update_clause = ', '.join([f"{col} = VALUES({col})" for col in data[0].keys()])
+        query = f"INSERT INTO performance_parameters ({columns}) VALUES ({placeholders}) ON DUPLICATE KEY UPDATE {update_clause}"
         
         # 准备数据
         values = []
@@ -145,12 +148,12 @@ class DataLoader:
             values.append(tuple(record.values()))
         
         try:
-            # 批量插入
+            # 批量插入或更新
             self.db_conn.prod_cursor.executemany(query, values)
             self.db_conn.commit(self.db_conn.prod_db)
             return True
         except Exception as e:
-            print(f"插入性能参数失败: {e}")
+            print(f"插入/更新性能参数失败: {e}")
             self.db_conn.rollback(self.db_conn.prod_db)
             return False
     
