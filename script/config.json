@@ -1,7 +1,7 @@
 {
     "api_url": "http://localhost:8000",
     "api_timeout": 30,
-    "interval_minutes": 1,
+    "interval_minutes": 0.5,
     "start_day": 1,
     "start_hour": 0,
     "total_hours": 24,
