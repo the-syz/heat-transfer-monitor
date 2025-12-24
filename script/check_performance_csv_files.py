@@ -2,8 +2,8 @@ import sys
 import os
 import pandas as pd
 
-# 添加backend目录到Python路径
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
+# 添加script/data_import目录到Python路径
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'script', 'data_import')))
 
 from config import DATA_SOURCE_PATHS
 
