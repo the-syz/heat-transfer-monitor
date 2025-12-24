@@ -21,7 +21,7 @@ async def update_empty_alpha_o():
         # 初始化数据库连接
         await Tortoise.init(
             db_url='mysql://root:admin@localhost:3306/heat_transfer_monitor',
-            modules={'models': ['backend.models']}
+            modules={'models': ['data.models']}
         )
         await Tortoise.generate_schemas()
         
