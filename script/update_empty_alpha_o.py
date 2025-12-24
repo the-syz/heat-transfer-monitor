@@ -12,16 +12,16 @@ import os
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 从data.models导入PerformanceParameter
-from data.models import PerformanceParameter
+# 从data.test_data.models导入PerformanceParameter
+from data.test_data.models import PerformanceParameter
 
 async def update_empty_alpha_o():
     """更新所有alpha_o字段为空的记录"""
     try:
         # 初始化数据库连接
         await Tortoise.init(
-            db_url='mysql://root:admin@localhost:3306/heat_transfer_monitor',
-            modules={'models': ['data.models']}
+            db_url='mysql://heatexMCP:123123@localhost:3306/heat_exchanger_monitor_db_test',
+            modules={'models': ['data.test_data.models']}
         )
         await Tortoise.generate_schemas()
         
