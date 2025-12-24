@@ -248,13 +248,14 @@ async def import_heat_transfer_data(file_path):
                 return float(value) if isinstance(value, np.floating) else int(value)
             return value
         
-        # 1. 性能参数数据 - 只设置K字段，不设置alpha_i和alpha_o，避免覆盖之前导入的有效数据
+        # 1. 性能参数数据 - 设置K字段和alpha_o字段
         performance_param = PerformanceParameter(
             heat_exchanger_id=heat_exchanger_id,
             timestamp=timestamp,
             points=points,
             side=side,
-            K=safe_value(row.get('K_actual'))
+            K=safe_value(row.get('K_actual')),
+            alpha_o=safe_value(row.get('alpha_o') or 5000)  # 设置默认值5000 W/(m²·K)
         )
         performance_data.append(performance_param)
         
@@ -483,7 +484,7 @@ async def import_performance_parameters_file(file_path):
             # 根据文件内容映射合适的K值字段
             K=safe_value(row.get('K') or row.get('K_actual') or row.get('overall_u')),
             alpha_i=safe_value(row.get('alpha_i') or row.get('tubeside_h')),
-            alpha_o=safe_value(row.get('alpha_o') or row.get('shellside_h')),
+            alpha_o=safe_value(row.get('alpha_o') or row.get('shellside_h') or 5000),  # 设置默认值5000 W/(m²·K)
             heat_duty=safe_value(row.get('heat_duty')),
             effectiveness=safe_value(row.get('effectiveness')),
             lmtd=safe_value(row.get('lmtd') or row.get('LMTD'))
