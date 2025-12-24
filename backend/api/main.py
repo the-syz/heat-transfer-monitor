@@ -7,7 +7,9 @@ import sys
 from datetime import datetime
 
 # 添加backend目录到Python路径
-sys.path.insert(0, os.path.abspath('../'))
+# main.py在backend/api/目录下，需要添加backend目录本身到路径
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, backend_dir)
 
 from db.db_connection import DatabaseConnection
 from calculation.main_calculator import MainCalculator
@@ -29,7 +31,8 @@ app.add_middleware(
 )
 
 # 加载配置
-CONFIG_FILE = "../config/config.json"
+# 使用相对于backend目录的路径
+CONFIG_FILE = os.path.join(backend_dir, "config", "config.json")
 with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
     config = json.load(f)
 

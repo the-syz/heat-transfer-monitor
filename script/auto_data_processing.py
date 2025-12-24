@@ -6,7 +6,7 @@
 
 功能：
 1. 从测试数据库读取数据
-2. 每间隔1分钟，模拟增加1小时的时间来读取该小时段内的全部数据
+2. 每间隔0.5分钟，模拟增加1小时的时间来读取该小时段内的全部数据
 3. 对每个小时段的完整数据执行预设的计算流程
 4. 调用指定API接口获取特定管段的指定参数
 5. 将API获取的数据以TXT格式保存至output文件夹
@@ -136,7 +136,15 @@ def main_processing():
     """主处理函数"""
     global current_hour, current_day, calculator
     
+    # 设置最大天数限制（测试用）
+    MAX_DAYS = 50
+    
     try:
+        # 检查是否超过最大天数
+        if current_day > MAX_DAYS:
+            logger.info(f"已达到最大天数限制({MAX_DAYS}天)，脚本结束")
+            sys.exit(0)
+        
         # 1. 模拟时间增加
         logger.info(f"开始处理第{current_day}天第{current_hour}小时的数据")
         
@@ -173,10 +181,12 @@ def main_processing():
         if current_hour >= 24:
             current_hour = 0
             current_day += 1
+            logger.info(f"进入第{current_day}天")
             
-        # 取消天数限制，让脚本可以一直运行
-        # logger.info("已完成所有天数的数据处理，脚本结束")
-        # sys.exit(0)
+            # 检查是否超过最大天数限制
+            if current_day > MAX_DAYS:
+                logger.info(f"已达到最大天数限制({MAX_DAYS}天)，脚本结束")
+                sys.exit(0)
             
     except Exception as e:
         logger.error(f"主处理函数异常: {e}", exc_info=True)
@@ -205,7 +215,9 @@ def main():
     
     # 5. 初始化计算器
     logger.info("初始化主计算器")
-    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+    # MainCalculator需要backend/config/config.json
+    backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../backend'))
+    config_path = os.path.join(backend_dir, 'config', 'config.json')
     calculator = MainCalculator(config_path)
     
     # 6. 执行初始处理

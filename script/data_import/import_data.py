@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 import asyncio
 import pandas as pd
+import numpy as np
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -110,10 +111,32 @@ async def import_cache_full_data(file_path):
         physical_data.append(physical_param)
         
         # 3. 性能参数数据
+        # 处理NaN值，转换为None（确保Tortoise ORM能正确处理）
+        def safe_value(value):
+            """安全地处理pandas/numpy值，转换为Python原生类型或None"""
+            if value is None:
+                return None
+            if pd.isna(value):
+                return None
+            # 如果是numpy类型，转换为Python原生类型
+            if isinstance(value, (np.floating, np.integer)):
+                return float(value) if isinstance(value, np.floating) else int(value)
+            return value
+        
         # K值可以来自K或K_actual字段
         k_value = row.get('K')
         if pd.isna(k_value):
             k_value = row.get('K_actual')
+        k_value = safe_value(k_value)
+        
+        # alpha_i可以从tubeside_h获取（如果alpha_i字段不存在）
+        alpha_i_val = row.get('alpha_i')
+        if pd.isna(alpha_i_val) or alpha_i_val is None:
+            alpha_i_val = row.get('tubeside_h')
+        alpha_i_val = safe_value(alpha_i_val)
+        
+        # alpha_o直接从alpha_o字段获取，不使用shellside_h代替
+        alpha_o_val = safe_value(row.get('alpha_o'))
         
         performance_param = PerformanceParameter(
             heat_exchanger_id=heat_exchanger_id,
@@ -121,11 +144,11 @@ async def import_cache_full_data(file_path):
             points=points,
             side=side,
             K=k_value,
-            alpha_i=row.get('alpha_i'),
-            alpha_o=row.get('alpha_o'),
-            heat_duty=row.get('heat_duty'),  # 如果没有这些字段，会使用默认值None
-            effectiveness=row.get('effectiveness'),
-            lmtd=row.get('LMTD')
+            alpha_i=alpha_i_val,
+            alpha_o=alpha_o_val,
+            heat_duty=safe_value(row.get('heat_duty')),
+            effectiveness=safe_value(row.get('effectiveness')),
+            lmtd=safe_value(row.get('LMTD'))
         )
         performance_data.append(performance_param)
         
@@ -213,15 +236,25 @@ async def import_heat_transfer_data(file_path):
         # 换热器编号，默认为1
         heat_exchanger_id = 1
         
-        # 1. 性能参数数据
+        # 处理NaN值，转换为None（确保Tortoise ORM能正确处理）
+        def safe_value(value):
+            """安全地处理pandas/numpy值，转换为Python原生类型或None"""
+            if value is None:
+                return None
+            if pd.isna(value):
+                return None
+            # 如果是numpy类型，转换为Python原生类型
+            if isinstance(value, (np.floating, np.integer)):
+                return float(value) if isinstance(value, np.floating) else int(value)
+            return value
+        
+        # 1. 性能参数数据 - 只设置K字段，不设置alpha_i和alpha_o，避免覆盖之前导入的有效数据
         performance_param = PerformanceParameter(
             heat_exchanger_id=heat_exchanger_id,
             timestamp=timestamp,
             points=points,
             side=side,
-            K=row.get('K_actual'),
-            alpha_i=row.get('alpha_i'),
-            alpha_o=row.get('alpha_o')
+            K=safe_value(row.get('K_actual'))
         )
         performance_data.append(performance_param)
         
@@ -495,6 +528,11 @@ async def main():
         for file_path in cache_full_data_files:
             result = await import_cache_full_data(file_path)
             total_results.append(result)
+            
+            # 如果设置了只导入一天的数据，则跳出循环
+            if os.environ.get('IMPORT_ONLY_ONE_DAY', 'false').lower() == 'true':
+                print("检测到IMPORT_ONLY_ONE_DAY环境变量，只导入一天数据后退出")
+                break
         
         # 2. 导入two_stage_linear下的heat_transfer.csv文件
         heat_transfer_dir = os.path.join(DATA_SOURCE_PATHS['result_all_data_in_1'], 'two_stage_linear', 'heat_transfer_coefficients')

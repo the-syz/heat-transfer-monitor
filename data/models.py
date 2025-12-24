@@ -16,8 +16,20 @@ class HeatExchanger(Model):
     tube_section_count = fields.IntField(description="管侧分段数")
     shell_section_count = fields.IntField(description="壳侧分段数")
     d_i_original = fields.FloatField(description="原始内径 (m)")
-    d_o = fields.FloatField(description="外径 (m)")
+    d_o = fields.FloatField(description="外径 (m)")  # 换热管外径
     lambda_t = fields.FloatField(description="管壁导热系数 (W/(m·K))")
+    heat_exchange_area = fields.FloatField(null=True, description="换热面积 (m²)")
+    tube_passes = fields.IntField(null=True, description="管程数")
+    shell_passes = fields.IntField(null=True, description="壳程数")
+    tube_wall_thickness = fields.FloatField(null=True, description="换热管壁厚 (m)")
+    tube_length = fields.FloatField(null=True, description="换热管长度 (m)")
+    tube_count = fields.IntField(null=True, description="换热管数")
+    tube_arrangement = fields.CharField(max_length=50, null=True, description="换热管布置形式")
+    tube_pitch = fields.FloatField(null=True, description="换热管间距 (m)")
+    shell_inner_diameter = fields.FloatField(null=True, description="壳体内径 (m)")
+    baffle_type = fields.CharField(max_length=50, null=True, description="折流板类型")
+    baffle_cut_ratio = fields.FloatField(null=True, description="折流板切口率")
+    baffle_spacing = fields.FloatField(null=True, description="折流板间距 (m)")
 
     class Meta:
         table = "heat_exchanger"
@@ -91,19 +103,6 @@ class ModelParameter(Model):
         table = "model_parameters"
         unique_together = ("heat_exchanger", "timestamp")
 
-# 新增：K_prediction表，存储各测点的K_predicted值
-class KPrediction(Model):
-    """K预测值表，存储各测点的K_predicted值"""
-    id = fields.IntField(pk=True, description="主键")
-    heat_exchanger = fields.ForeignKeyField("models.HeatExchanger", related_name="k_predictions", description="外键，连接换热器表")
-    timestamp = fields.DatetimeField(description="时间戳")
-    points = fields.IntField(description="测量点（整型）")
-    side = fields.CharEnumField(SideEnum, description="侧标识")
-    K_predicted = fields.FloatField(description="预测总传热系数 (W/(m²·K))")
-
-    class Meta:
-        table = "k_predictions"
-        unique_together = ("heat_exchanger", "timestamp", "points", "side")
 
 # 新增：总传热系数管理表
 class KManagement(Model):

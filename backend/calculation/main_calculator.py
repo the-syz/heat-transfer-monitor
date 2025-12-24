@@ -58,12 +58,18 @@ class MainCalculator:
         self.stage = 1  # 1: 阶段1, 2: 阶段2
         self.training_days = self.config.get('training_days', 20)
         self.optimization_hours = self.config.get('optimization_hours', 3)
+        self.history_days = self.config.get('history_days', 3)
+        self.stage1_error_threshold = self.config.get('stage1_error_threshold', 5)
+        self.stage1_history_days = self.config.get('stage1_history_days', 5)
         
         # 初始化模型参数
         self.model_params = None
         
         # 初始化训练数据
         self.training_data = []
+        
+        # 标记是否正在重新处理历史数据，避免无限循环
+        self.reprocessing_history = False
         
         # 获取所有换热器ID
         self.heat_exchanger_ids = [he['id'] for he in heat_exchangers] if heat_exchangers else [1]
@@ -118,7 +124,8 @@ class MainCalculator:
         
         for data in operation_data:
             timestamp = data['timestamp']
-            side = data['side']
+            # 将side转换为大写，确保大小写一致
+            side = data['side'].upper()
             points = data['points']
             temperature = data['temperature']
             
@@ -144,25 +151,35 @@ class MainCalculator:
         lmtd_map = {}
         for timestamp, temp_data in temp_map.items():
             # 获取热侧温度（假设points=1为入口，points=2为出口）
-            T_h_in = temp_data.get(hot_side, {}).get(1, 0) or 0
-            T_h_out = temp_data.get(hot_side, {}).get(2, 0) or 0
+            # 检查热侧数据是否完整
+            if hot_side in temp_data and 1 in temp_data[hot_side] and 2 in temp_data[hot_side]:
+                T_h_in = temp_data[hot_side][1] or 0
+                T_h_out = temp_data[hot_side][2] or 0
+            else:
+                T_h_in = 0
+                T_h_out = 0
             
             # 获取冷侧温度
-            T_c_in = temp_data.get(cold_side, {}).get(1, 0) or 0
-            T_c_out = temp_data.get(cold_side, {}).get(2, 0) or 0
+            # 检查冷侧数据是否完整
+            if cold_side in temp_data and 1 in temp_data[cold_side] and 2 in temp_data[cold_side]:
+                T_c_in = temp_data[cold_side][1] or 0
+                T_c_out = temp_data[cold_side][2] or 0
+            else:
+                T_c_in = 0
+                T_c_out = 0
             
             # 计算LMTD
-            # 确保所有温度值都不是None
-            T_h_in = T_h_in or 0
-            T_h_out = T_h_out or 0
-            T_c_in = T_c_in or 0
-            T_c_out = T_c_out or 0
+            # 确保所有温度值都有效且大于0
             if T_h_in > 0 and T_h_out > 0 and T_c_in > 0 and T_c_out > 0:
                 lmtd = self.lmtd_calc.calculate_lmtd(
                     T_h_in, T_h_out, T_c_in, T_c_out, flow_type='counterflow'
                 )
                 lmtd_map[timestamp] = lmtd
             else:
+                # 只有当所有必要的温度值都存在且大于0时，才计算LMTD
+                print(f"警告: 时间戳 {timestamp} 的温度数据不完整或无效，无法计算LMTD")
+                print(f"热侧温度: T_h_in={T_h_in}, T_h_out={T_h_out}")
+                print(f"冷侧温度: T_c_in={T_c_in}, T_c_out={T_c_out}")
                 lmtd_map[timestamp] = 0
         
         return lmtd_map
@@ -285,22 +302,45 @@ class MainCalculator:
             print(f"第{day}天第{hour}小时没有运行参数数据")
             return False
         
-        # 将运行参数插入到生产数据库
-        if not self.data_loader.insert_operation_parameters(operation_data):
+        print(f"从测试数据库读取到 {len(operation_data)} 条运行参数数据")
+        # 检查运行参数数据中的温度值
+        if operation_data:
+            sample_data = operation_data[0]
+            print(f"运行参数样本数据: {sample_data}")
+            # 检查关键字段是否有值
+            if sample_data.get('temperature') == 0 or sample_data.get('temperature') is None:
+                print(f"警告: 运行参数中的温度为0或None，可能导致计算错误")
+            if sample_data.get('velocity') == 0 or sample_data.get('velocity') is None:
+                print(f"警告: 运行参数中的流速为0或None，可能导致计算错误")
+            
+        # 将运行参数插入到生产数据库（传入heat_exchanger用于计算flow_rate）
+        if not self.data_loader.insert_operation_parameters(operation_data, self.heat_exchanger):
             print("插入运行参数失败")
             return False
         
         # 步骤2: 计算物理参数、雷诺数和普朗特数
         # 先尝试从测试数据库读取物理参数
         physical_data = self.data_loader.get_physical_parameters_by_hour(day, hour)
+        print(f"从测试数据库读取到 {len(physical_data)} 条物理参数数据")
         
-        # 计算物理参数
+        # 计算物理参数（处理所有侧的数据）
         processed_data = self.data_loader.process_operation_data(operation_data, physical_data, self.heat_exchanger)
         
-        # 过滤tube侧数据，不区分大小写
-        processed_data = [data for data in processed_data if data.get('side', '').lower() == 'tube']
+        # 过滤tube侧数据，不区分大小写，用于后续模型训练和K_predicted计算
+        tube_processed_data = [data for data in processed_data if data.get('side', '').lower() == 'tube']
         
-        if not processed_data:
+        print(f"处理后得到 {len(processed_data)} 条数据，其中tube侧数据 {len(tube_processed_data)} 条")
+        
+        # 检查处理后的数据是否有有效值
+        if processed_data:
+            sample_processed = processed_data[0]
+            print(f"处理后数据样本: points={sample_processed.get('points')}, side={sample_processed.get('side')}, "
+                  f"reynolds={sample_processed.get('reynolds')}, prandtl={sample_processed.get('prandtl')}, "
+                  f"density={sample_processed.get('density')}, viscosity={sample_processed.get('viscosity')}")
+            if sample_processed.get('reynolds') == 0:
+                print(f"警告: 计算出的雷诺数为0，可能导致后续计算错误")
+        
+        if not tube_processed_data:
             print(f"第{day}天第{hour}小时没有tube侧物理参数数据")
             return False
         
@@ -311,6 +351,13 @@ class MainCalculator:
         
         # 步骤3: 读取测试数据库中的性能参数，填入k_management和performance_parameters
         test_performance_data = self.data_loader.get_test_performance_parameters_by_hour(day, hour)
+        print(f"从测试数据库读取到 {len(test_performance_data)} 条性能参数数据")
+        if test_performance_data:
+            sample_perf = test_performance_data[0]
+            print(f"测试性能参数样本: K={sample_perf.get('K')}, heat_duty={sample_perf.get('heat_duty')}, "
+                  f"alpha_o={sample_perf.get('alpha_o')}")
+            if sample_perf.get('K') == 0 or sample_perf.get('K') is None:
+                print(f"警告: 测试性能参数中的K值为0或None")
         
         # 构建测试性能参数映射表
         test_performance_map = {}
@@ -328,11 +375,13 @@ class MainCalculator:
         # 步骤4: 计算LMTD和K_lmtd
         # 构建温度映射表
         temp_map = self.get_temperature_map(operation_data)
+        print(f"温度映射表包含 {len(temp_map)} 个时间戳")
         
         # 构建热负荷映射表
         heat_duty_map = {}
         for data in test_performance_data:
             heat_duty_map[data['timestamp']] = data.get('heat_duty', 0)
+        print(f"热负荷映射表包含 {len(heat_duty_map)} 个时间戳")
         
         # 计算LMTD
         lmtd_map = self.calculate_lmtd(operation_data)
@@ -340,7 +389,8 @@ class MainCalculator:
         # 计算K_lmtd
         k_lmtd_map = self.calculate_k_lmtd(heat_duty_map, lmtd_map)
         
-        for data in processed_data:
+        # 只处理tube侧数据，用于构建k_management和performance_parameters
+        for data in tube_processed_data:
             timestamp = data['timestamp']
             heat_exchanger_id = data['heat_exchanger_id']
             points = data['points']
@@ -383,24 +433,33 @@ class MainCalculator:
             print("插入K_management失败")
             return False
         
-        # 步骤5: 阶段1训练（当天数首次达到training_days参数值时触发）
-        if self.stage == 1 and not self.model_params and day >= self.training_days:
-            print(f"天数已达到{day}天，触发阶段1训练")
+        # 步骤5: 阶段1训练（在training_days的所有数据读取完成后触发，即第training_days天的第23小时之后）
+        if self.stage == 1 and not self.model_params and day == self.training_days and hour == 23:
+            print(f"第{self.training_days}天的所有数据已读取完成，触发阶段1训练")
             self.train_stage1()
             self.stage = 2
-            print("阶段1训练完成，开始重新处理之前所有天数的数据，以更新输出文件...")
+            print("阶段1训练完成，开始重新处理之前所有天数的数据，以更新K_predicted和性能参数...")
+            # 标记正在重新处理，避免无限循环
+            self.reprocessing_history = True
             # 重新处理从第1天到当前天的数据
             for reprocess_day in range(1, day + 1):
                 for reprocess_hour in range(24):
                     print(f"重新处理第{reprocess_day}天第{reprocess_hour}小时的数据...")
+                    # 临时设置reprocessing标志，避免再次触发训练
+                    old_reprocessing = self.reprocessing_history
+                    self.reprocessing_history = True
                     self.process_data_by_hour(reprocess_day, reprocess_hour)
+                    self.reprocessing_history = old_reprocessing
+            self.reprocessing_history = False
             print("所有历史数据重新处理完成")
         
-        # 步骤6: 计算K_predicted和alpha_i
-        # 初始化alpha_i_map，避免后续使用时出错
+        # 步骤6: 计算K_predicted和alpha_i（仅在stage1训练完成后）
+        # 初始化alpha_i_map和k_predicted_map，避免后续使用时出错
         alpha_i_map = {}
+        k_predicted_map = {}
+        # 只有在stage1训练完成后（有model_params）才计算K_predicted
         if self.model_params:
-            k_predicted_map, alpha_i_map = self.predict_k_and_alpha_i(processed_data)
+            k_predicted_map, alpha_i_map = self.predict_k_and_alpha_i(tube_processed_data)
             
             # 更新k_management数据，添加K_predicted
             for data in k_management_data:
@@ -409,40 +468,83 @@ class MainCalculator:
             
             # 更新k_management表
             self.data_loader.update_k_management_with_predicted(k_management_data)
+        else:
+            # stage1训练之前，K_predicted设为0
+            for data in k_management_data:
+                data['K_predicted'] = 0
         
         # 确保为所有performance_data添加alpha_i字段，即使没有model_params
         for data in performance_data:
             key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
             data['alpha_i'] = alpha_i_map.get(key, 0)  # 默认为0，如果没有计算值
         
-        # 步骤7: 阶段2优化（阶段1训练完成后，以天为单位进行）
+        # 步骤7: 阶段2优化（阶段1训练完成后，在optimization_hours之后进行）
         # 只有在完成阶段1训练后，才考虑阶段2训练
-        if self.stage == 2:
-            # 每天只执行一次阶段2训练，在该天的最后一个小时（23点）执行
-            if hour == 23:  # 假设每天24小时，最后一个小时是23点
-                print(f"第{day}天结束，触发阶段2训练")
-                # 获取当天的优化数据
-                optimization_data = self.data_loader.get_optimization_data_for_stage2(day, 24)  # 使用全天24小时的数据
+        if self.stage == 2 and not self.reprocessing_history:
+            # 在optimization_hours之后执行阶段2训练（例如第3小时之后）
+            if hour == self.optimization_hours:
+                print(f"第{day}天已读取{self.optimization_hours}小时数据，触发阶段2优化")
+                # 获取优化数据：当天的optimization_hours + 历史history_days天
+                optimization_data = self.data_loader.get_optimization_data_for_stage2(
+                    day, self.optimization_hours, self.history_days
+                )
                 if optimization_data:
                     # 执行阶段2训练
                     self.train_stage2(optimization_data)
-                    # 重新计算K_predicted和alpha_i
-                    k_predicted_map, alpha_i_map = self.predict_k_and_alpha_i(processed_data)
-                    
-                    # 更新k_management数据
-                    for data in k_management_data:
-                        key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
-                        data['K_predicted'] = k_predicted_map.get(key, 0)
-                    
-                    # 更新k_management表
-                    self.data_loader.update_k_management_with_predicted(k_management_data)
-                    
-                    # 更新performance_parameters数据
-                    for data in performance_data:
-                        key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
-                        data['alpha_i'] = alpha_i_map.get(key, 0)
+                    print(f"阶段2优化完成，开始重新计算第{day}天所有小时的K_predicted...")
+                    # 重新处理当天的所有小时，更新K_predicted
+                    for reprocess_hour in range(24):
+                        # 获取该小时的数据
+                        hour_operation_data = self.data_loader.get_operation_parameters_by_hour(day, reprocess_hour)
+                        if hour_operation_data:
+                            hour_physical_data = self.data_loader.get_physical_parameters_by_hour(day, reprocess_hour)
+                            hour_processed_data = self.data_loader.process_operation_data(
+                                hour_operation_data, hour_physical_data, self.heat_exchanger
+                            )
+                            hour_tube_data = [d for d in hour_processed_data if d.get('side', '').lower() == 'tube']
+                            if hour_tube_data:
+                                # 重新计算K_predicted
+                                hour_k_predicted_map, hour_alpha_i_map = self.predict_k_and_alpha_i(hour_tube_data)
+                                # 更新k_management
+                                hour_k_management = []
+                                for d in hour_tube_data:
+                                    key = (d['heat_exchanger_id'], d['timestamp'], d['points'])
+                                    hour_k_management.append({
+                                        'heat_exchanger_id': d['heat_exchanger_id'],
+                                        'timestamp': d['timestamp'],
+                                        'points': d['points'],
+                                        'side': d['side'],
+                                        'K_predicted': hour_k_predicted_map.get(key, 0)
+                                    })
+                                if hour_k_management:
+                                    self.data_loader.update_k_management_with_predicted(hour_k_management)
                 else:
                     print(f"第{day}天没有足够的优化数据，跳过阶段2训练")
+            
+            # 检查误差，如果达到阈值，重新进入stage1
+            if hour == 23 and day > self.training_days:
+                avg_error = self.data_loader.calculate_average_error(day)
+                print(f"第{day}天平均误差: {avg_error:.2f}%")
+                if avg_error >= self.stage1_error_threshold:
+                    print(f"误差达到阈值{self.stage1_error_threshold}%，重新进入阶段1训练")
+                    self.stage = 1
+                    self.model_params = None
+                    # 重新训练stage1
+                    self.train_stage1()
+                    self.stage = 2
+                    # 重新计算该天和stage1_history_days中的性能参数
+                    reprocess_start_day = max(1, day - self.stage1_history_days)
+                    print(f"重新处理第{reprocess_start_day}天到第{day}天的数据...")
+                    self.reprocessing_history = True
+                    for reprocess_day in range(reprocess_start_day, day + 1):
+                        for reprocess_hour in range(24):
+                            print(f"重新处理第{reprocess_day}天第{reprocess_hour}小时的数据...")
+                            old_reprocessing = self.reprocessing_history
+                            self.reprocessing_history = True
+                            self.process_data_by_hour(reprocess_day, reprocess_hour)
+                            self.reprocessing_history = old_reprocessing
+                    self.reprocessing_history = False
+                    print("重新训练后的数据重新处理完成")
         
         # 步骤8: 填写performance_parameters中的K值
         for data in performance_data:
@@ -452,7 +554,11 @@ class MainCalculator:
             
             # 构建k_management查询键
             k_key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
-            K_predicted = k_predicted_map.get(k_key, 0) if self.model_params else 0
+            # 确保k_predicted_map已初始化
+            if self.model_params and k_predicted_map:
+                K_predicted = k_predicted_map.get(k_key, 0)
+            else:
+                K_predicted = 0
             
             # 阶段1优化中的所有K值按K_actual写
             if self.stage == 1:
@@ -466,12 +572,19 @@ class MainCalculator:
                 else:
                     data['K'] = K_predicted
         
+        # 检查performance_data中的数据
+        if performance_data:
+            sample_perf_data = performance_data[0]
+            print(f"准备插入的性能参数样本: K={sample_perf_data.get('K')}, heat_duty={sample_perf_data.get('heat_duty')}, "
+                  f"LMTD={sample_perf_data.get('LMTD')}, alpha_i={sample_perf_data.get('alpha_i')}, "
+                  f"alpha_o={sample_perf_data.get('alpha_o')}")
+        
         # 将performance_parameters数据插入到生产数据库
         if not self.data_loader.insert_performance_parameters(performance_data):
             print("插入性能参数失败")
             return False
         
-        print(f"第{day}天第{hour}小时的数据处理完成")
+        print(f"第{day}天第{hour}小时的数据处理完成，共插入 {len(performance_data)} 条性能参数")
         return True
     
     def run_calculation(self, day, hour):
