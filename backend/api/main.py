@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import json
@@ -59,13 +59,45 @@ async def process_data(day: int, hour: int):
                 "hour": hour
             }
         else:
-            raise HTTPException(status_code=500, detail="数据处理失败")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "code": "DATA_PROCESSING_FAILED",
+                    "type": "InternalServerError",
+                    "message": "数据处理失败",
+                    "timestamp": datetime.now().isoformat()
+                }
+            )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_PARAMETERS",
+                "type": "BadRequest",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "INTERNAL_SERVER_ERROR",
+                "type": "InternalServerError",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
 
 @app.get("/operation-parameters", summary="获取运行参数", description="获取运行参数数据")
 async def get_operation_parameters(heat_exchanger_id: int = None, day: int = None, hour: int = None):
     try:
+        # 验证参数
+        if day and (day < 1 or day > 31):
+            raise ValueError("day参数必须在1-31之间")
+        if hour is not None and (hour < 0 or hour > 23):
+            raise ValueError("hour参数必须在0-23之间")
+        
         # 构建查询条件
         query = "SELECT * FROM operation_parameters WHERE 1=1"
         params = []
@@ -102,13 +134,45 @@ async def get_operation_parameters(heat_exchanger_id: int = None, day: int = Non
                 "data": result
             }
         else:
-            raise HTTPException(status_code=500, detail="查询失败")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "code": "QUERY_EXECUTION_FAILED",
+                    "type": "InternalServerError",
+                    "message": "数据库查询执行失败",
+                    "timestamp": datetime.now().isoformat()
+                }
+            )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_PARAMETERS",
+                "type": "BadRequest",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "INTERNAL_SERVER_ERROR",
+                "type": "InternalServerError",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
 
 @app.get("/physical-parameters", summary="获取物理参数", description="获取物理参数数据")
 async def get_physical_parameters(heat_exchanger_id: int = None, day: int = None, hour: int = None):
     try:
+        # 验证参数
+        if day and (day < 1 or day > 31):
+            raise ValueError("day参数必须在1-31之间")
+        if hour is not None and (hour < 0 or hour > 23):
+            raise ValueError("hour参数必须在0-23之间")
+        
         # 构建查询条件
         query = "SELECT * FROM physical_parameters WHERE 1=1"
         params = []
@@ -145,13 +209,45 @@ async def get_physical_parameters(heat_exchanger_id: int = None, day: int = None
                 "data": result
             }
         else:
-            raise HTTPException(status_code=500, detail="查询失败")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "code": "QUERY_EXECUTION_FAILED",
+                    "type": "InternalServerError",
+                    "message": "数据库查询执行失败",
+                    "timestamp": datetime.now().isoformat()
+                }
+            )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_PARAMETERS",
+                "type": "BadRequest",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "INTERNAL_SERVER_ERROR",
+                "type": "InternalServerError",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
 
 @app.get("/k-management", summary="获取K管理数据", description="获取K_lmtd数据")
 async def get_k_management(heat_exchanger_id: int = None, day: int = None, hour: int = None):
     try:
+        # 验证参数
+        if day and (day < 1 or day > 31):
+            raise ValueError("day参数必须在1-31之间")
+        if hour is not None and (hour < 0 or hour > 23):
+            raise ValueError("hour参数必须在0-23之间")
+        
         # 构建查询条件
         query = "SELECT * FROM k_management WHERE 1=1"
         params = []
@@ -188,13 +284,45 @@ async def get_k_management(heat_exchanger_id: int = None, day: int = None, hour:
                 "data": result
             }
         else:
-            raise HTTPException(status_code=500, detail="查询失败")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "code": "QUERY_EXECUTION_FAILED",
+                    "type": "InternalServerError",
+                    "message": "数据库查询执行失败",
+                    "timestamp": datetime.now().isoformat()
+                }
+            )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_PARAMETERS",
+                "type": "BadRequest",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "INTERNAL_SERVER_ERROR",
+                "type": "InternalServerError",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
 
 @app.get("/performance", summary="获取性能数据", description="获取换热器性能数据")
 async def get_performance(heat_exchanger_id: int = None, day: int = None, hour: int = None):
     try:
+        # 验证参数
+        if day and (day < 1 or day > 31):
+            raise ValueError("day参数必须在1-31之间")
+        if hour is not None and (hour < 0 or hour > 23):
+            raise ValueError("hour参数必须在0-23之间")
+        
         # 构建查询条件
         query = "SELECT * FROM performance_parameters WHERE 1=1"
         params = []
@@ -231,9 +359,35 @@ async def get_performance(heat_exchanger_id: int = None, day: int = None, hour: 
                 "data": result
             }
         else:
-            raise HTTPException(status_code=500, detail="查询失败")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "code": "QUERY_EXECUTION_FAILED",
+                    "type": "InternalServerError",
+                    "message": "数据库查询执行失败",
+                    "timestamp": datetime.now().isoformat()
+                }
+            )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_PARAMETERS",
+                "type": "BadRequest",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "INTERNAL_SERVER_ERROR",
+                "type": "InternalServerError",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
 
 @app.get("/heat-exchangers", summary="获取所有换热器", description="获取所有换热器信息")
 async def get_heat_exchangers():
@@ -245,11 +399,23 @@ async def get_heat_exchangers():
             "data": heat_exchangers
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "FETCH_HEAT_EXCHANGERS_FAILED",
+                "type": "InternalServerError",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
 
 @app.get("/model-parameters", summary="获取模型参数", description="获取模型参数数据")
 async def get_model_parameters(heat_exchanger_id: int = None, day: int = None):
     try:
+        # 验证参数
+        if day and (day < 1 or day > 365):
+            raise ValueError("day参数必须在1-365之间")
+        
         # 构建查询条件
         query = "SELECT * FROM model_parameters WHERE 1=1"
         params = []
@@ -270,13 +436,45 @@ async def get_model_parameters(heat_exchanger_id: int = None, day: int = None):
                 "data": result
             }
         else:
-            raise HTTPException(status_code=500, detail="查询失败")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "code": "QUERY_EXECUTION_FAILED",
+                    "type": "InternalServerError",
+                    "message": "数据库查询执行失败",
+                    "timestamp": datetime.now().isoformat()
+                }
+            )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_PARAMETERS",
+                "type": "BadRequest",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "INTERNAL_SERVER_ERROR",
+                "type": "InternalServerError",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
 
 @app.get("/calculate-performance/{day}/{hour}", summary="计算指定时间的性能", description="计算指定天数和小时的换热器性能")
 async def calculate_performance(day: int, hour: int):
     try:
+        # 验证参数
+        if day < 1 or day > 365:
+            raise ValueError("day参数必须在1-365之间")
+        if hour < 0 or hour > 23:
+            raise ValueError("hour参数必须在0-23之间")
+            
         success = calculator.run_calculation(day, hour)
         if success:
             return {
@@ -286,9 +484,35 @@ async def calculate_performance(day: int, hour: int):
                 "hour": hour
             }
         else:
-            raise HTTPException(status_code=500, detail="性能计算失败")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "code": "PERFORMANCE_CALCULATION_FAILED",
+                    "type": "InternalServerError",
+                    "message": "性能计算失败",
+                    "timestamp": datetime.now().isoformat()
+                }
+            )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "INVALID_PARAMETERS",
+                "type": "BadRequest",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "INTERNAL_SERVER_ERROR",
+                "type": "InternalServerError",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
 
 if __name__ == "__main__":
     uvicorn.run(
