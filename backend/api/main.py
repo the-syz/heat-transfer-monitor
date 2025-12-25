@@ -234,42 +234,6 @@ async def get_performance(heat_exchanger_id: int = None, day: int = None, hour: 
             raise HTTPException(status_code=500, detail="查询失败")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
-        if heat_exchanger_id:
-            query += " AND heat_exchanger_id = %s"
-            params.append(heat_exchanger_id)
-        
-        # 处理day和hour参数，转换为timestamp范围查询
-        if day:
-            if hour is not None:
-                # 查询特定天和小时的数据
-                start_time = f"2022-01-{day:02d} {hour:02d}:00:00"
-                end_time = f"2022-01-{day:02d} {hour:02d}:59:59"
-                query += " AND timestamp BETWEEN %s AND %s"
-                params.extend([start_time, end_time])
-            else:
-                # 查询特定天的数据
-                start_time = f"2022-01-{day:02d} 00:00:00"
-                end_time = f"2022-01-{day:02d} 23:59:59"
-                query += " AND timestamp BETWEEN %s AND %s"
-                params.extend([start_time, end_time])
-        elif hour is not None:
-            # 只查询特定小时的数据（所有天）
-            query += " AND HOUR(timestamp) = %s"
-            params.append(hour)
-        
-        # 执行查询
-        if calculator.db_conn.execute_query(calculator.db_conn.prod_cursor, query, params):
-            result = calculator.db_conn.fetch_all(calculator.db_conn.prod_cursor)
-            return {
-                "status": "success",
-                "count": len(result),
-                "data": result
-            }
-        else:
-            raise HTTPException(status_code=500, detail="查询失败")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/heat-exchangers", summary="获取所有换热器", description="获取所有换热器信息")
 async def get_heat_exchangers():
