@@ -392,8 +392,14 @@ async def import_operation_parameters_file(file_path):
         
         # 处理NaN值，转换为None
         def safe_value(value):
-            if isinstance(value, float) and pd.isna(value):
+            """安全地处理pandas/numpy值，转换为Python原生类型或None"""
+            if value is None:
                 return None
+            if pd.isna(value):
+                return None
+            # 如果是numpy类型，转换为Python原生类型
+            if isinstance(value, (np.floating, np.integer)):
+                return float(value) if isinstance(value, np.floating) else int(value)
             return value
         
         # 创建运行参数数据
