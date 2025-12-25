@@ -8,7 +8,7 @@ DATA_SOURCE_PATHS = {
 
 # 数据库配置
 DATABASE_CONFIG = {
-    'url': 'mysql://heatexMCP:123123@localhost:3306/heat_exchanger_monitor_db_test',
+    'url': 'mysql://root:123456@localhost:3306/heat_exchanger_monitor_db_test',
     'modules': {'models': ['data.test_data.models']}
 }
 
