@@ -664,3 +664,36 @@ class DataLoader:
             return result['avg_error'] if result and result['avg_error'] is not None else 0
         return 0
     
+    def update_performance_parameters_k(self, data):
+        """更新performance_parameters表的K字段"""
+        if not data:
+            return True
+        
+        # 构建更新语句
+        query = """
+        UPDATE performance_parameters 
+        SET K = %s 
+        WHERE heat_exchanger_id = %s AND timestamp = %s AND points = %s AND side = %s
+        """
+        
+        # 准备数据
+        values = []
+        for record in data:
+            values.append((
+                record.get('K', 0),
+                record['heat_exchanger_id'],
+                record['timestamp'],
+                record['points'],
+                record['side']
+            ))
+        
+        try:
+            # 批量更新
+            self.db_conn.prod_cursor.executemany(query, values)
+            self.db_conn.commit(self.db_conn.prod_db)
+            return True
+        except Exception as e:
+            print(f"更新performance_parameters的K值失败: {e}")
+            self.db_conn.rollback(self.db_conn.prod_db)
+            return False
+    

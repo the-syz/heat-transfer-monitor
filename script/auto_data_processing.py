@@ -121,20 +121,105 @@ def call_api(api_url: str, endpoint: str, params: Dict[str, Any] = None, retries
     
     for i in range(retries):
         try:
+            logger.info(f"API调用: {full_url}, 参数: {params}")
             response = requests.get(full_url, params=params, headers=headers, timeout=30)
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            logger.info(f"API调用成功，返回状态: {data.get('status')}")
+            return data
         except requests.exceptions.RequestException as e:
             logger.error(f"API调用失败 (尝试 {i+1}/{retries}): {e}")
             if i < retries - 1:
-                time.sleep(2)  # 等待2秒后重试
+                logger.info(f"{i+1}秒后重试...")
+                time.sleep(i+1)  # 指数退避重试策略
     
+    logger.warning(f"API调用失败，已达到最大重试次数 {retries}")
     return None
+
+# Stage1完成回调函数
+def on_stage1_complete(day):
+    """Stage1训练完成后的回调函数，统一输出所有相关结果文件"""
+    global logger, config, output_dir, calculator
+    
+    logger.info(f"Stage1训练完成，开始输出第1天到第{day}天的所有结果文件")
+    
+    # 遍历所有天数，输出文件
+    for output_day in range(1, day + 1):
+        for output_hour in range(24):
+            # 调用API获取性能数据
+            api_params = {
+                "heat_exchanger_id": None,
+                "day": output_day,
+                "hour": output_hour
+            }
+            
+            performance_data = call_api(config["api_url"], "/performance", api_params)
+            
+            if performance_data and performance_data["status"] == "success":
+                logger.info(f"输出第{output_day}天第{output_hour}小时的结果文件")
+                save_data_to_file(performance_data, output_dir, output_hour, output_day)
+            else:
+                logger.warning(f"获取第{output_day}天第{output_hour}小时的数据失败，跳过")
+    
+    logger.info(f"Stage1训练完成，已输出第1天到第{day}天的所有结果文件")
+
+# Stage2完成回调函数
+def on_stage2_complete(day):
+    """Stage2优化完成后的回调函数，立即输出当天结果文件"""
+    global logger, config, output_dir
+    
+    logger.info(f"Stage2优化完成，开始输出第{day}天的所有结果文件")
+    
+    # 输出当天的所有小时文件
+    for output_hour in range(24):
+        # 调用API获取性能数据
+        api_params = {
+            "heat_exchanger_id": None,
+            "day": day,
+            "hour": output_hour
+        }
+        
+        performance_data = call_api(config["api_url"], "/performance", api_params)
+        
+        if performance_data and performance_data["status"] == "success":
+            logger.info(f"输出第{day}天第{output_hour}小时的结果文件（覆盖原有文件）")
+            save_data_to_file(performance_data, output_dir, output_hour, day)
+        else:
+            logger.warning(f"获取第{day}天第{output_hour}小时的数据失败，跳过")
+    
+    logger.info(f"Stage2优化完成，已输出第{day}天的所有结果文件")
+
+# 误差超限重新训练完成回调函数
+def on_error_retrain_complete(start_day, end_day):
+    """误差超限重新训练完成后的回调函数，覆盖相关日期的输出文件"""
+    global logger, config, output_dir
+    
+    logger.info(f"误差超限重新训练完成，开始覆盖第{start_day}天到第{end_day}天的结果文件")
+    
+    # 覆盖指定天数范围内的所有文件
+    for output_day in range(start_day, end_day + 1):
+        for output_hour in range(24):
+            # 调用API获取性能数据
+            api_params = {
+                "heat_exchanger_id": None,
+                "day": output_day,
+                "hour": output_hour
+            }
+            
+            performance_data = call_api(config["api_url"], "/performance", api_params)
+            
+            if performance_data and performance_data["status"] == "success":
+                logger.info(f"覆盖第{output_day}天第{output_hour}小时的结果文件")
+                save_data_to_file(performance_data, output_dir, output_hour, output_day)
+            else:
+                logger.warning(f"获取第{output_day}天第{output_hour}小时的数据失败，跳过")
+    
+    logger.info(f"误差超限重新训练完成，已覆盖第{start_day}天到第{end_day}天的所有结果文件")
 
 # 主处理函数
 def main_processing():
     """主处理函数"""
-    global current_hour, current_day, calculator
+    global current_hour, current_day, calculator, config
     
     # 设置最大天数限制（测试用）
     MAX_DAYS = 50
@@ -144,6 +229,13 @@ def main_processing():
         if current_day > MAX_DAYS:
             logger.info(f"已达到最大天数限制({MAX_DAYS}天)，脚本结束")
             sys.exit(0)
+        
+        # 获取training_days配置
+        backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../backend'))
+        config_path = os.path.join(backend_dir, 'config', 'config.json')
+        with open(config_path, 'r', encoding='utf-8') as f:
+            backend_config = json.load(f)
+        training_days = backend_config.get('training_days', 20)
         
         # 1. 模拟时间增加
         logger.info(f"开始处理第{current_day}天第{current_hour}小时的数据")
@@ -155,28 +247,16 @@ def main_processing():
         if success:
             logger.info(f"数据处理成功 - 第{current_day}天第{current_hour}小时")
             
-            # 3. 调用API获取性能数据
-            logger.info(f"调用API获取性能数据 - 第{current_day}天第{current_hour}小时")
-            api_params = {
-                "heat_exchanger_id": None,  # 可以根据需要设置特定管段
-                "day": current_day,
-                "hour": current_hour
-            }
+            # Stage1阶段：不生成任何输出文件
+            # Stage1训练完成后，会通过回调函数统一输出所有文件
+            # Stage2阶段：每日优化完成后，会通过回调函数立即输出当天文件
+            # 误差超限重新训练后，会通过回调函数覆盖相关文件
+            # 因此，这里不再输出文件
             
-            # 调用API获取性能数据
-            performance_data = call_api(config["api_url"], "/performance", api_params)
-            
-            if performance_data and performance_data["status"] == "success":
-                logger.info(f"API调用成功，获取到 {performance_data['count']} 条性能数据")
-                
-                # 4. 保存数据到文件
-                save_data_to_file(performance_data, output_dir, current_hour, current_day)
-            else:
-                logger.error(f"API调用失败或返回错误状态: {performance_data}")
         else:
             logger.error(f"数据处理失败 - 第{current_day}天第{current_hour}小时")
         
-        # 5. 更新时间
+        # 3. 更新时间
         current_hour += 1
         if current_hour >= 24:
             current_hour = 0
@@ -220,6 +300,11 @@ def main():
     config_path = os.path.join(backend_dir, 'config', 'config.json')
     calculator = MainCalculator(config_path)
     
+    # 设置回调函数
+    calculator.set_stage1_complete_callback(on_stage1_complete)
+    calculator.set_stage2_complete_callback(on_stage2_complete)
+    calculator.set_error_retrain_complete_callback(on_error_retrain_complete)
+    
     # 6. 执行初始处理
     main_processing()
     
@@ -241,3 +326,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

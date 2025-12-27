@@ -18,11 +18,19 @@ class NonlinearRegressionCalculator:
         """根据换热器参数计算换热面积
         与MainCalculator中的方法保持一致
         """
-        d_o = self.geometry.get('d_o', 0.025)
-        tube_count = self.geometry.get('tube_section_count', 100)  # 默认100根管子
-        tube_length = 4.0  # 假设管长为4米
+        # 优先使用数据库中已有的换热面积
+        if 'heat_exchange_area' in self.geometry and self.geometry.get('heat_exchange_area') is not None and self.geometry['heat_exchange_area'] > 0:
+            self.geometry['A'] = self.geometry['heat_exchange_area']
+            return
         
-        # 计算总面积
+        # 如果数据库中没有换热面积，则根据换热器参数计算
+        d_o = self.geometry.get('d_o', 0.025)
+        # 优先使用tube_count，如果没有则使用tube_section_count作为备选
+        tube_count = self.geometry.get('tube_count') or self.geometry.get('tube_section_count', 268)  # 默认268根管子（根据数据库初始化数据）
+        # 从geometry参数读取管长，如果没有则使用默认值
+        tube_length = self.geometry.get('tube_length', 9.0)  # 默认9米（根据数据库初始化数据）
+        
+        # 计算总面积：π * 管外径 * 管长 * 管数
         self.geometry['A'] = np.pi * d_o * tube_length * tube_count
     
     def model_func(self, x, a, p, b):
@@ -124,45 +132,36 @@ class NonlinearRegressionCalculator:
                     if Re_value is not None and Re_value > 0:
                         Re = Re_value
                 
+                if Re is None and 'reynolds' in record:
+                    Re_value = record['reynolds']
+                    if Re_value is not None and Re_value > 0:
+                        Re = Re_value
+                
                 if Re is None:
                     # 计算Re
-                    rho = record.get('density', 1000)  # 密度 kg/m³
-                    u = record.get('velocity', 0)  # 流速 m/s
-                    mu = record.get('dynamic_viscosity', 0.001)  # 粘度 Pa·s
+                    d_i = self.geometry.get('d_i_original', 0.02)
+                    rho = record.get('density', 1000)
+                    u = record.get('velocity', 0)
+                    mu = record.get('dynamic_viscosity', 0.001)
                     
-                    if u > 0 and mu > 0 and rho > 0:
+                    if u > 0 and mu > 0:
                         Re = rho * u * d_i / mu
-                        if Re <= 0 or Re > 1e6:  # 增加上限过滤异常值
-                            Re = None
+                        if Re <= 0:
+                            return 0
+                    else:
+                        return 0
                 
-                if Re is None:
-                    continue
+                # 使用模型计算Y=1/K
+                Y_pred = self.model_func(Re, a, p, b)
                 
-                # 计算Y=1/K
-                K = None
-                if 'K_lmtd' in record:
-                    K_value = record['K_lmtd']
-                    if K_value is not None and K_value > 0:
-                        K = K_value
+                # 避免除零错误
+                if Y_pred <= 0:
+                    return 0
                 
-                if K is None and 'K' in record:
-                    K_value = record['K']
-                    if K_value is not None and K_value > 0:
-                        K = K_value
+                # 计算K
+                K_pred = 1 / Y_pred
                 
-                if K is None:
-                    # 尝试从其他参数计算K
-                    continue
-                
-                y = 1 / K
-                
-                # 过滤异常值（基于经验范围）
-                if y < 0.0001 or y > 0.01:
-                    continue
-                
-                # 存储数据
-                all_re.append(Re)
-                all_y.append(y)
+                return K_pred
                 
             except Exception as e:
                 continue
@@ -299,6 +298,11 @@ class NonlinearRegressionCalculator:
             
             if Re is None and 'Re' in record:
                 Re_value = record['Re']
+                if Re_value is not None and Re_value > 0:
+                    Re = Re_value
+            
+            if Re is None and 'reynolds' in record:
+                Re_value = record['reynolds']
                 if Re_value is not None and Re_value > 0:
                     Re = Re_value
             

@@ -33,22 +33,37 @@ class MainCalculator:
                 'd_o': self.heat_exchanger['d_o'],
                 'lambda_t': self.heat_exchanger['lambda_t'],
                 'tube_side_fluid': self.heat_exchanger['tube_side_fluid'],
-                'shell_side_fluid': self.heat_exchanger['shell_side_fluid']
+                'shell_side_fluid': self.heat_exchanger['shell_side_fluid'],
+                # 添加更多结构参数，供nonlinear_regression等模块使用
+                'heat_exchange_area': self.heat_exchanger.get('heat_exchange_area'),
+                'tube_count': self.heat_exchanger.get('tube_count'),
+                'tube_section_count': self.heat_exchanger.get('tube_section_count'),
+                'tube_length': self.heat_exchanger.get('tube_length'),
+                'tube_wall_thickness': self.heat_exchanger.get('tube_wall_thickness'),
+                'tube_pitch': self.heat_exchanger.get('tube_pitch'),
+                'tube_arrangement': self.heat_exchanger.get('tube_arrangement'),
+                'shell_inner_diameter': self.heat_exchanger.get('shell_inner_diameter'),
+                'baffle_type': self.heat_exchanger.get('baffle_type'),
+                'baffle_cut_ratio': self.heat_exchanger.get('baffle_cut_ratio'),
+                'baffle_spacing': self.heat_exchanger.get('baffle_spacing')
             }
-            # 计算换热面积（这里假设简单计算，后续可以考虑从数据库获取）
+            # 计算或获取换热面积
             self.calculate_heat_exchanger_area()
         else:
-            # 如果没有数据，使用默认值
+            # 如果没有数据，使用默认值（与数据库初始化数据保持一致）
             self.heat_exchanger = None
             self.geometry_params = {
                 'd_i_original': 0.02,
                 'd_o': 0.025,
                 'lambda_t': 45.0,
                 'tube_side_fluid': '水',
-                'shell_side_fluid': '轻柴油'
+                'shell_side_fluid': '轻柴油',
+                'tube_count': 268,
+                'tube_length': 9.0,
+                'heat_exchange_area': 188.0
             }
-            # 默认换热面积
-            self.heat_exchanger_area = 1.0
+            # 默认换热面积（与数据库初始化数据保持一致）
+            self.heat_exchanger_area = 188.0
         
         # 初始化计算器
         self.lmtd_calc = LMTDCalculator()
@@ -65,6 +80,26 @@ class MainCalculator:
         # 初始化模型参数
         self.model_params = None
         
+        # 尝试从数据库加载已训练的模型参数
+        try:
+            # 查询最新的模型参数
+            query = "SELECT a, p, b FROM model_parameters ORDER BY timestamp DESC LIMIT 1"
+            self.db_conn.prod_cursor.execute(query)
+            result = self.db_conn.prod_cursor.fetchone()
+            
+            if result:
+                self.model_params = {
+                    'a': result[0],
+                    'p': result[1],
+                    'b': result[2]
+                }
+                print(f"从数据库加载已训练的模型参数: a={self.model_params['a']:.6f}, p={self.model_params['p']:.6f}, b={self.model_params['b']:.6f}")
+            else:
+                print("数据库中没有已训练的模型参数，将进行初始训练")
+        except Exception as e:
+            print(f"加载模型参数失败: {e}")
+            self.model_params = None
+        
         # 初始化训练数据
         self.training_data = []
         
@@ -73,6 +108,11 @@ class MainCalculator:
         
         # 获取所有换热器ID
         self.heat_exchanger_ids = [he['id'] for he in heat_exchangers] if heat_exchangers else [1]
+        
+        # 回调函数，用于通知stage1/stage2完成
+        self.on_stage1_complete_callback = None
+        self.on_stage2_complete_callback = None
+        self.on_error_retrain_complete_callback = None
     
     def load_config(self):
         """加载配置文件"""
@@ -81,22 +121,44 @@ class MainCalculator:
     
     def calculate_heat_exchanger_area(self):
         """计算换热面积"""
-        # 从换热器参数计算换热面积
-        # 假设：d_o是管外径，tube_section_count是管数
+        # 优先使用数据库中已有的换热面积
         if self.heat_exchanger:
+            if self.heat_exchanger.get('heat_exchange_area') is not None and self.heat_exchanger['heat_exchange_area'] > 0:
+                self.heat_exchanger_area = self.heat_exchanger['heat_exchange_area']
+                return
+            
+            # 如果数据库中没有换热面积，则根据换热器参数计算
             d_o = self.heat_exchanger['d_o']
-            tube_count = self.heat_exchanger['tube_section_count']
-            # 假设管长为4米（可以根据实际情况调整）
-            tube_length = 4.0
-            # 计算总面积
-            self.heat_exchanger_area = np.pi * d_o * tube_length * tube_count
+            # 优先使用tube_count，如果没有则使用tube_section_count作为备选
+            tube_count = self.heat_exchanger.get('tube_count') or self.heat_exchanger.get('tube_section_count', 0)
+            # 从数据库读取管长，如果没有则使用默认值
+            tube_length = self.heat_exchanger.get('tube_length', 9.0)  # 默认9米（根据数据库初始化数据）
+            
+            if tube_count > 0 and d_o > 0 and tube_length > 0:
+                # 计算总面积：π * 管外径 * 管长 * 管数
+                self.heat_exchanger_area = np.pi * d_o * tube_length * tube_count
+            else:
+                # 如果缺少必要参数，使用默认面积
+                self.heat_exchanger_area = 188.0  # 默认188 m²（根据数据库初始化数据）
         else:
-            # 默认面积
-            self.heat_exchanger_area = 1.0
+            # 如果没有换热器数据，使用默认面积
+            self.heat_exchanger_area = 188.0
     
     def get_heat_exchanger_area(self):
         """获取换热面积"""
         return self.heat_exchanger_area
+    
+    def set_stage1_complete_callback(self, callback):
+        """设置stage1完成时的回调函数"""
+        self.on_stage1_complete_callback = callback
+    
+    def set_stage2_complete_callback(self, callback):
+        """设置stage2完成时的回调函数"""
+        self.on_stage2_complete_callback = callback
+    
+    def set_error_retrain_complete_callback(self, callback):
+        """设置误差超限重新训练完成时的回调函数"""
+        self.on_error_retrain_complete_callback = callback
     
     def determine_hot_cold_sides(self):
         """确定热侧和冷侧
@@ -378,9 +440,15 @@ class MainCalculator:
         print(f"温度映射表包含 {len(temp_map)} 个时间戳")
         
         # 构建热负荷映射表
-        heat_duty_map = {}
+        heat_duty_map = {}        
+        # 先尝试从test_performance_data获取heat_duty
         for data in test_performance_data:
-            heat_duty_map[data['timestamp']] = data.get('heat_duty', 0)
+            heat_duty = data.get('heat_duty', 0)
+            if heat_duty <= 0:
+                # 如果heat_duty为0或未定义，尝试计算
+                print(f"警告: 从测试数据库获取的heat_duty为0，尝试计算...")
+                heat_duty = self.calculate_heat_duty(data, processed_data, operation_data)
+            heat_duty_map[data['timestamp']] = heat_duty
         print(f"热负荷映射表包含 {len(heat_duty_map)} 个时间戳")
         
         # 计算LMTD
@@ -424,7 +492,8 @@ class MainCalculator:
                 'heat_duty': heat_duty_map.get(timestamp, 0),
                 'LMTD': lmtd,
                 'alpha_o': alpha_o,
-                'heat_exchanger_id': heat_exchanger_id
+                'heat_exchanger_id': heat_exchanger_id,
+                'fouling_resistance': self.nonlinear_calc.calculate_fouling_resistance(day) if self.model_params else 0
             }
             performance_data.append(performance_entry)
         
@@ -452,6 +521,9 @@ class MainCalculator:
                     self.reprocessing_history = old_reprocessing
             self.reprocessing_history = False
             print("所有历史数据重新处理完成")
+            # 调用stage1完成回调
+            if self.on_stage1_complete_callback:
+                self.on_stage1_complete_callback(day)
         
         # 步骤6: 计算K_predicted和alpha_i（仅在stage1训练完成后）
         # 初始化alpha_i_map和k_predicted_map，避免后续使用时出错
@@ -477,6 +549,14 @@ class MainCalculator:
         for data in performance_data:
             key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
             data['alpha_i'] = alpha_i_map.get(key, 0)  # 默认为0，如果没有计算值
+        
+        # 构建k_key_map，用于步骤8中快速查找K_predicted
+        k_key_map = {}
+        if self.model_params and k_predicted_map:
+            for data in tube_processed_data:
+                k_key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
+                if k_key not in k_key_map:
+                    k_key_map[k_key] = k_predicted_map.get(k_key, 0)
         
         # 步骤7: 阶段2优化（阶段1训练完成后，在optimization_hours之后进行）
         # 只有在完成阶段1训练后，才考虑阶段2训练
@@ -518,8 +598,27 @@ class MainCalculator:
                                     })
                                 if hour_k_management:
                                     self.data_loader.update_k_management_with_predicted(hour_k_management)
+                                
+                                # 更新performance_parameters表的K值
+                                hour_perf_update = []
+                                for d in hour_tube_data:
+                                    key = (d['heat_exchanger_id'], d['timestamp'], d['points'])
+                                    K_predicted = hour_k_predicted_map.get(key, 0)
+                                    if K_predicted > 0:
+                                        hour_perf_update.append({
+                                            'heat_exchanger_id': d['heat_exchanger_id'],
+                                            'timestamp': d['timestamp'],
+                                            'points': d['points'],
+                                            'side': d['side'],
+                                            'K': K_predicted
+                                        })
+                                if hour_perf_update:
+                                    self.data_loader.update_performance_parameters_k(hour_perf_update)
                 else:
                     print(f"第{day}天没有足够的优化数据，跳过阶段2训练")
+                # 调用stage2完成回调
+                if self.on_stage2_complete_callback:
+                    self.on_stage2_complete_callback(day)
             
             # 检查误差，如果达到阈值，重新进入stage1
             if hour == 23 and day > self.training_days:
@@ -545,6 +644,9 @@ class MainCalculator:
                             self.reprocessing_history = old_reprocessing
                     self.reprocessing_history = False
                     print("重新训练后的数据重新处理完成")
+                    # 调用误差超限重新训练完成回调
+                    if self.on_error_retrain_complete_callback:
+                        self.on_error_retrain_complete_callback(reprocess_start_day, day)
         
         # 步骤8: 填写performance_parameters中的K值
         for data in performance_data:
@@ -555,13 +657,16 @@ class MainCalculator:
             # 构建k_management查询键
             k_key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
             # 确保k_predicted_map已初始化
-            if self.model_params and k_predicted_map:
-                K_predicted = k_predicted_map.get(k_key, 0)
+            if self.model_params and k_key_map:
+                K_predicted = k_key_map.get(k_key, 0)
             else:
                 K_predicted = 0
             
+            # 如果正在重新处理历史数据（stage1完成后或误差超限后），使用K_predicted
+            if self.reprocessing_history and self.model_params:
+                data['K'] = K_predicted
             # 阶段1优化中的所有K值按K_actual写
-            if self.stage == 1:
+            elif self.stage == 1:
                 data['K'] = K_actual
             # 阶段2中optimization_hours前的K用K_actual，该天其他时间用K_predicted
             else:
@@ -580,6 +685,7 @@ class MainCalculator:
                   f"alpha_o={sample_perf_data.get('alpha_o')}")
         
         # 将performance_parameters数据插入到生产数据库
+        # insert_performance_parameters使用ON DUPLICATE KEY UPDATE，会自动更新K值
         if not self.data_loader.insert_performance_parameters(performance_data):
             print("插入性能参数失败")
             return False
@@ -595,21 +701,6 @@ class MainCalculator:
         
         return True
     
-    def calculate_heat_exchanger_area(self):
-        """计算换热面积"""
-        # 从换热器参数计算换热面积
-        # 假设：d_o是管外径，tube_section_count是管数
-        if self.heat_exchanger:
-            d_o = self.heat_exchanger['d_o']
-            tube_count = self.heat_exchanger['tube_section_count']
-            # 假设管长为4米（可以根据实际情况调整）
-            tube_length = 4.0
-            # 计算总面积
-            self.heat_exchanger_area = np.pi * d_o * tube_length * tube_count
-        else:
-            # 默认面积
-            self.heat_exchanger_area = 1.0
-    
     def close(self):
         """关闭数据库连接"""
         self.db_conn.disconnect_test_db()
@@ -618,3 +709,104 @@ class MainCalculator:
     def __del__(self):
         """析构函数，关闭数据库连接"""
         self.close()
+
+    def calculate_heat_duty(self, data, processed_data=None, operation_data=None):
+        """计算热负荷
+        参数:
+            data: 包含流量、温度等信息的数据字典
+            processed_data: 处理后的物理参数数据
+            operation_data: 运行参数数据
+        返回值:
+            计算得到的热负荷值
+        """
+        try:
+            # 获取流量、比热容和温度差
+            flow_rate = data.get('flow_rate', 0)
+            specific_heat = data.get('specific_heat', 4.1868)  # 默认水的比热容，单位：kJ/(kg·K)
+            
+            # 如果flow_rate为0，尝试从processed_data中获取
+            if flow_rate <= 0 and processed_data:
+                # 查找对应的处理后数据
+                for p_data in processed_data:
+                    if p_data['timestamp'] == data['timestamp'] and p_data['side'] == data['side']:
+                        # 尝试从处理后数据中获取specific_heat
+                        specific_heat = p_data.get('specific_heat', 4.1868)
+                        # 查找对应的运行参数数据以获取velocity和temperature
+                        if operation_data:
+                            for op_data in operation_data:
+                                if (op_data['timestamp'] == data['timestamp'] and 
+                                    op_data['side'] == data['side'] and 
+                                    op_data['points'] == p_data['points']):
+                                    velocity = op_data.get('velocity', 0)
+                                    temperature = op_data.get('temperature', 25)
+                                    if velocity > 0:
+                                        # 计算flow_rate
+                                        flow_rate = self.data_loader.calculate_flow_rate(velocity, temperature, data['side'], self.heat_exchanger)
+                                        break
+                        break
+            
+            # 获取温度信息，支持多种数据结构
+            # 尝试直接获取温度差
+            delta_T = data.get('delta_T', 0)
+            
+            if delta_T <= 0:
+                # 如果没有温度差，尝试从温度点获取
+                T_in = data.get('T_in', 0) or data.get('temperature_in', 0) or 0
+                T_out = data.get('T_out', 0) or data.get('temperature_out', 0) or 0
+                
+                # 如果还没有温度，尝试从side特定的温度获取
+                side = data.get('side', '').upper()
+                if side == 'TUBE':
+                    T_in = T_in or data.get('T_c_in', 0) or data.get('temperature_cold_in', 0) or 0
+                    T_out = T_out or data.get('T_c_out', 0) or data.get('temperature_cold_out', 0) or 0
+                else:
+                    T_in = T_in or data.get('T_h_in', 0) or data.get('temperature_hot_in', 0) or 0
+                    T_out = T_out or data.get('T_h_out', 0) or data.get('temperature_hot_out', 0) or 0
+                
+                # 如果仍然没有温度差，尝试从operation_data中获取
+                if (T_in == 0 or T_out == 0) and operation_data:
+                    # 按时间戳和侧别分组温度数据
+                    temp_map = self.get_temperature_map(operation_data)
+                    if data['timestamp'] in temp_map:
+                        temp_data = temp_map[data['timestamp']]
+                        # 获取热侧和冷侧
+                        hot_side, cold_side = self.determine_hot_cold_sides()
+                        
+                        if side == 'TUBE':
+                            # Tube侧是冷侧还是热侧？
+                            if cold_side.lower() == 'tube':
+                                T_in = temp_data.get(cold_side, {}).get(1, 0) or 0
+                                T_out = temp_data.get(cold_side, {}).get(2, 0) or 0
+                            elif hot_side.lower() == 'tube':
+                                T_in = temp_data.get(hot_side, {}).get(1, 0) or 0
+                                T_out = temp_data.get(hot_side, {}).get(2, 0) or 0
+                        else:
+                            # Shell侧
+                            if cold_side.lower() == 'shell':
+                                T_in = temp_data.get(cold_side, {}).get(1, 0) or 0
+                                T_out = temp_data.get(cold_side, {}).get(2, 0) or 0
+                            elif hot_side.lower() == 'shell':
+                                T_in = temp_data.get(hot_side, {}).get(1, 0) or 0
+                                T_out = temp_data.get(hot_side, {}).get(2, 0) or 0
+                
+                # 计算温度差
+                delta_T = abs(T_out - T_in)
+            
+            # 确保所有参数都有效
+            if flow_rate > 0 and delta_T > 0:
+                # 热负荷计算公式：Q = m * c * ΔT
+                # 注意：flow_rate的单位需要与specific_heat匹配
+                heat_duty = flow_rate * specific_heat * delta_T
+                return heat_duty
+            else:
+                # 检查哪个参数无效
+                if flow_rate <= 0:
+                    print(f"警告: 流量参数无效 (flow_rate={flow_rate})")
+                if delta_T <= 0:
+                    print(f"警告: 温度差无效 (delta_T={delta_T})")
+                return 0
+        except Exception as e:
+            print(f"计算热负荷时发生错误: {e}")
+            import traceback
+            traceback.print_exc()  # 打印完整的错误堆栈
+            return 0

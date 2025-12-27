@@ -1,4 +1,4 @@
--- Active: 1757606878689@@127.0.0.1@3306@heat_exchanger_monitor_db
+-- Active: 1766489280848@@127.0.0.1@3306@heat_exchanger_monitor_db
 -- 清空heat_exchanger_monitor_db数据库中所有表的数据，但保留表结构
 
 -- 设置外键检查为0，避免删除时的外键约束问题
