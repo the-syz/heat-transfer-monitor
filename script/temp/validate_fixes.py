@@ -38,13 +38,17 @@ try:
     # 测试calculate_heat_duty方法
     try:
         # 测试正常情况
-        flow_rate = 100.0
-        specific_heat = 4.186
-        temp_in = 80.0
-        temp_out = 60.0
+        data = {
+            'flow_rate': 100.0,  # kg/h
+            'specific_heat': 4.186,  # kJ/(kg·K)
+            'T_in': 80.0,  # °C
+            'T_out': 60.0,  # °C
+            'side': 'tube',
+            'timestamp': '2022-01-01 00:00:00'
+        }
         
-        result = calculator.calculate_heat_duty(flow_rate, specific_heat, temp_in, temp_out)
-        expected = flow_rate * specific_heat * abs(temp_in - temp_out)
+        result = calculator.calculate_heat_duty(data)
+        expected = data['flow_rate'] * data['specific_heat'] * abs(data['T_in'] - data['T_out'])
         
         print(f"  正常情况测试: {result} (预期: {expected})")
         if abs(result - expected) < 0.0001:
@@ -53,7 +57,10 @@ try:
             print("  ✗ 正常情况测试失败")
         
         # 测试异常情况（流量为0）
-        result = calculator.calculate_heat_duty(0.0, specific_heat, temp_in, temp_out)
+        data_flow_zero = data.copy()
+        data_flow_zero['flow_rate'] = 0.0
+        
+        result = calculator.calculate_heat_duty(data_flow_zero)
         print(f"  异常情况测试（流量为0）: {result}")
         if result == 0:
             print("  ✓ 异常情况测试通过")
@@ -61,7 +68,10 @@ try:
             print("  ✗ 异常情况测试失败")
             
         # 测试异常情况（温差为0）
-        result = calculator.calculate_heat_duty(flow_rate, specific_heat, temp_in, temp_in)
+        data_temp_zero = data.copy()
+        data_temp_zero['T_out'] = data_temp_zero['T_in']
+        
+        result = calculator.calculate_heat_duty(data_temp_zero)
         print(f"  异常情况测试（温差为0）: {result}")
         if result == 0:
             print("  ✓ 异常情况测试通过")
@@ -70,6 +80,8 @@ try:
             
     except Exception as e:
         print(f"  ✗ calculate_heat_duty方法测试异常: {e}")
+        import traceback
+        traceback.print_exc()
     
     # 2. 验证K_LMTD字段名修复
     print("\n2. 验证K_LMTD字段名修复")
@@ -105,6 +117,8 @@ try:
         
     except Exception as e:
         print(f"  ✗ K_LMTD字段验证异常: {e}")
+        import traceback
+        traceback.print_exc()
     
     # 3. 验证API查询功能
     print("\n3. 验证API查询功能")
@@ -134,7 +148,7 @@ try:
             print("  ✗ API查询功能异常")
             
     except requests.exceptions.RequestException as e:
-        print(f"  ✓ API可能未运行，跳过API测试")
+        print(f"  ✗ API测试异常: {e}")
     except Exception as e:
         print(f"  ✗ API测试异常: {e}")
     
