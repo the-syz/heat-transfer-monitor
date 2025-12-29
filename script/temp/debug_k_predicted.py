@@ -20,12 +20,20 @@ def debug_k_predicted():
     """调试K_predicted为None的问题"""
     print("=== 调试K_predicted为None的问题 ===")
     
+    # 加载配置文件
+    config_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../backend/config/config.json'))
+    if not os.path.exists(config_file):
+        print(f"配置文件不存在: {config_file}")
+        return
+    
+    print(f"使用配置文件: {config_file}")
+    
     # 创建数据库连接
-    db_conn = DatabaseConnection()
-    if not db_conn.connect_to_test_db():
+    db_conn = DatabaseConnection(config_file)
+    if not db_conn.connect_test_db():
         print("连接测试数据库失败")
         return
-    if not db_conn.connect_to_prod_db():
+    if not db_conn.connect_prod_db():
         print("连接生产数据库失败")
         return
     
@@ -113,7 +121,7 @@ def debug_k_predicted():
     print(f"找到 {len(results)} 条记录")
     for row in results:
         print(f"记录: {row}")
-        print(f"K_predicted: {row[4]}")  # 假设第5列是K_predicted
+        print(f"K_predicted: {row.get('K_predicted', '未找到')}")
     
     # 关闭数据库连接
     db_conn.close_connection()
