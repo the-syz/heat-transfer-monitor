@@ -418,7 +418,7 @@ class MainCalculator:
                 'side': side,
                 'timestamp': timestamp,
                 'K_actual': K_actual,
-                'K_lmtd': K_lmtd,
+                'K_LMTD': K_lmtd,  # 修复字段名：K_lmtd改为K_LMTD
                 'heat_exchanger_id': heat_exchanger_id
             }
             k_management_data.append(k_data)
