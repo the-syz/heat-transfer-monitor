@@ -147,21 +147,29 @@ class NonlinearRegressionCalculator:
                     if u > 0 and mu > 0:
                         Re = rho * u * d_i / mu
                         if Re <= 0:
-                            return 0
+                            continue
                     else:
-                        return 0
+                        continue
                 
-                # 使用模型计算Y=1/K
-                Y_pred = self.model_func(Re, a, p, b)
+                # 获取K值，优先使用K_actual
+                K = None
+                if 'K_actual' in record:
+                    K = record['K_actual']
+                elif 'K_lmtd' in record:
+                    K = record['K_lmtd']
+                elif 'K_LMTD' in record:
+                    K = record['K_LMTD']
+                elif 'K' in record:
+                    K = record['K']
                 
-                # 避免除零错误
-                if Y_pred <= 0:
-                    return 0
+                if K is None or K <= 0:
+                    continue
                 
-                # 计算K
-                K_pred = 1 / Y_pred
+                # 计算Y=1/K
+                Y = 1.0 / K
                 
-                return K_pred
+                all_re.append(Re)
+                all_y.append(Y)
                 
             except Exception as e:
                 continue
