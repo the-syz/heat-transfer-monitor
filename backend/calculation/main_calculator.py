@@ -487,10 +487,26 @@ class MainCalculator:
             success = self.data_loader.update_k_management_with_predicted(k_management_data)
             print(f"更新k_management表结果: {success}")
         else:
-            # stage1训练之前，K_predicted设为0
+            # stage1训练之前，使用默认参数预测K_predicted
+            print(f"\n模型参数未训练，使用默认参数预测K_predicted")
+            # 使用默认参数 [1.0, 0.85, 0.0004] 进行预测
+            default_a, default_p, default_b = 1.0, 0.85, 0.0004
+            
+            for data in tube_processed_data:
+                Re = data.get('reynolds', 0)
+                if Re > 0:
+                    K_pred = self.nonlinear_calc.predict_K(Re, default_a, default_p, default_b)
+                    alpha_i = 1 / (default_a * np.power(Re, -default_p))
+                    key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
+                    k_predicted_map[key] = K_pred
+                    alpha_i_map[key] = alpha_i
+            
+            # 更新k_management数据，添加K_predicted
             for data in k_management_data:
-                data['K_predicted'] = 0
-            # 将stage1训练之前的K_predicted=0更新到数据库
+                key = (data['heat_exchanger_id'], data['timestamp'], data['points'])
+                data['K_predicted'] = k_predicted_map.get(key, 0)
+            
+            # 将stage1训练之前的K_predicted更新到数据库
             print(f"\n准备更新k_management表(stage1前)，共 {len(k_management_data)} 条记录")
             if k_management_data:
                 print(f"第一条记录示例: {k_management_data[0]}")
