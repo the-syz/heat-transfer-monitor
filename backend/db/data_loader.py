@@ -500,7 +500,7 @@ class DataLoader:
         end_date = f"2022-01-{training_days:02d} 23:59:59"
         
         query = """
-        SELECT p.*, k.K_actual
+        SELECT p.*, k.K_LMTD AS K_lmtd
         FROM physical_parameters p
         LEFT JOIN k_management k ON p.heat_exchanger_id = k.heat_exchanger_id 
                            AND p.timestamp = k.timestamp 
@@ -715,6 +715,7 @@ class DataLoader:
             self.db_conn.rollback(self.db_conn.prod_db)
             return False
     
+
 
 
 
