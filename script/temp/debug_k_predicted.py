@@ -20,24 +20,31 @@ def debug_k_predicted():
     """调试K_predicted为None的问题"""
     print("=== 调试K_predicted为None的问题 ===")
     
-    # 加载配置文件
-    config_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../backend/calculation/config.json'))
-    if not os.path.exists(config_file):
-        print(f"配置文件不存在: {config_file}")
+    # 创建数据库连接
+    db_conn = DatabaseConnection()
+    if not db_conn.connect_to_test_db():
+        print("连接测试数据库失败")
+        return
+    if not db_conn.connect_to_prod_db():
+        print("连接生产数据库失败")
         return
     
-    print(f"使用配置文件: {config_file}")
+    # 创建数据加载器
+    data_loader = DataLoader(db_conn)
     
-    # 创建主计算器实例
-    main_calc = MainCalculator(config_file)
+    # 获取换热器信息
+    heat_exchanger_info = data_loader.get_heat_exchanger_info(1)
+    if not heat_exchanger_info:
+        print("获取换热器信息失败")
+        return
     
-    # 检查数据库连接
-    print(f"测试数据库连接: {main_calc.db_conn.test_db is not None}")
-    print(f"生产数据库连接: {main_calc.db_conn.prod_db is not None}")
+    print(f"换热器信息: {heat_exchanger_info}")
     
-    # 检查换热器信息
-    print(f"换热器信息: {main_calc.heat_exchanger}")
-    print(f"几何参数: {main_calc.geometry_params}")
+    # 创建非线性回归计算器
+    nonlinear_calc = NonlinearRegressionCalculator(heat_exchanger_info)
+    
+    # 创建主计算器
+    main_calc = MainCalculator(data_loader, nonlinear_calc, heat_exchanger_info)
     
     # 阶段1训练
     print("\n=== 阶段1训练 ===")
@@ -54,14 +61,14 @@ def debug_k_predicted():
     print("\n=== 测试predict_k_and_alpha_i方法 ===")
     
     # 获取运行参数数据
-    operation_data = main_calc.data_loader.get_operation_parameters_by_hour(day, hour)
+    operation_data = data_loader.get_operation_parameters_by_hour(day, hour)
     print(f"运行参数数据量: {len(operation_data)}")
     if operation_data:
         print(f"运行参数示例: {operation_data[0]}")
     
     # 计算物理参数
-    physical_data = main_calc.data_loader.get_physical_parameters_by_hour(day, hour)
-    processed_data = main_calc.data_loader.process_operation_data(operation_data, physical_data, main_calc.heat_exchanger)
+    physical_data = data_loader.get_physical_parameters_by_hour(day, hour)
+    processed_data = data_loader.process_operation_data(operation_data, physical_data, heat_exchanger_info)
     print(f"处理后的数据量: {len(processed_data)}")
     if processed_data:
         print(f"处理后的数据示例: {processed_data[0]}")
@@ -101,15 +108,15 @@ def debug_k_predicted():
     print("\n=== 验证数据库中的K_predicted值 ===")
     # 读取k_management表的前几条记录
     query = "SELECT * FROM k_management WHERE K_predicted IS NOT NULL LIMIT 5"
-    main_calc.db_conn.prod_cursor.execute(query)
-    results = main_calc.db_conn.prod_cursor.fetchall()
+    db_conn.prod_cursor.execute(query)
+    results = db_conn.prod_cursor.fetchall()
     print(f"找到 {len(results)} 条记录")
     for row in results:
         print(f"记录: {row}")
         print(f"K_predicted: {row[4]}")  # 假设第5列是K_predicted
     
     # 关闭数据库连接
-    main_calc.close()
+    db_conn.close_connection()
     
     print("\n=== 调试完成 ===")
 
