@@ -2,7 +2,7 @@ import sys
 import os
 
 # 设置工作目录到项目根目录
-os.chdir('e:\BaiduSyncdisk\heat-transfer-monitor\backend')
+os.chdir(r'e:\BaiduSyncdisk\heat-transfer-monitor\backend')
 
 # 直接测试calculate_heat_duty函数的核心逻辑
 def test_calculate_heat_duty_logic():
