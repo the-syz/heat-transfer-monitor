@@ -4,9 +4,18 @@ import json
 import os
 
 class DatabaseConnection:
-    def __init__(self, config_file):
-        self.config_file = config_file
-        self.config = self.load_config()
+    def __init__(self, config_source):
+        self.config = None
+        
+        # 检查config_source是文件路径还是配置字典
+        if isinstance(config_source, dict):
+            # 如果是字典，直接使用
+            self.config = config_source
+        else:
+            # 如果是文件路径，加载配置文件
+            self.config_file = config_source
+            self.config = self.load_config()
+        
         self.test_db = None
         self.prod_db = None
         self.test_cursor = None

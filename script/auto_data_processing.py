@@ -40,16 +40,16 @@ except ImportError as e:
 def setup_logging():
     """设置日志配置"""
     logger = logging.getLogger('auto_data_processing')
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.WARNING)  # 将日志级别提高到WARNING，减少输出消息数量
     
     # 创建文件处理器
     log_file = os.path.join(os.path.dirname(__file__), 'auto_data_processing.log')
     file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    file_handler.setLevel(logging.INFO)
+    file_handler.setLevel(logging.INFO)  # 文件日志保持INFO级别，方便调试和查看历史
     
     # 创建控制台处理器
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logging.WARNING)  # 控制台日志提高到WARNING级别，减少输出
     
     # 设置日志格式
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -148,7 +148,7 @@ def on_stage1_complete(day):
         for output_hour in range(24):
             # 调用API获取性能数据
             api_params = {
-                "heat_exchanger_id": None,
+                "heat_exchanger_id": 1,
                 "day": output_day,
                 "hour": output_hour
             }
@@ -174,7 +174,7 @@ def on_stage2_complete(day):
     for output_hour in range(24):
         # 调用API获取性能数据
         api_params = {
-            "heat_exchanger_id": None,
+            "heat_exchanger_id": 1,
             "day": day,
             "hour": output_hour
         }
@@ -201,7 +201,7 @@ def on_error_retrain_complete(start_day, end_day):
         for output_hour in range(24):
             # 调用API获取性能数据
             api_params = {
-                "heat_exchanger_id": None,
+                "heat_exchanger_id": 1,
                 "day": output_day,
                 "hour": output_hour
             }
@@ -241,20 +241,19 @@ def main_processing():
         logger.info(f"开始处理第{current_day}天第{current_hour}小时的数据")
         
         # 2. 执行数据处理
-        logger.info(f"执行数据处理流程 - 第{current_day}天第{current_hour}小时")
-        success = calculator.process_data_by_hour(current_day, current_hour)
+        logger.debug(f"执行数据处理流程 - 第{current_day}天第{current_hour}小时")
+        success = calculator.process_data_by_hour(current_day, current_hour, discard_no_k=True)
         
         if success:
             logger.info(f"数据处理成功 - 第{current_day}天第{current_hour}小时")
+        else:
+            logger.error(f"数据处理失败 - 第{current_day}天第{current_hour}小时")
             
             # Stage1阶段：不生成任何输出文件
             # Stage1训练完成后，会通过回调函数统一输出所有文件
             # Stage2阶段：每日优化完成后，会通过回调函数立即输出当天文件
             # 误差超限重新训练后，会通过回调函数覆盖相关文件
             # 因此，这里不再输出文件
-            
-        else:
-            logger.error(f"数据处理失败 - 第{current_day}天第{current_hour}小时")
         
         # 3. 更新时间
         current_hour += 1
@@ -326,4 +325,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-
+
+
+
+

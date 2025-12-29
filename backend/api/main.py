@@ -90,7 +90,7 @@ async def process_data(day: int, hour: int):
         )
 
 @app.get("/operation-parameters", summary="获取运行参数", description="获取运行参数数据")
-async def get_operation_parameters(heat_exchanger_id: int = None, day: int = None, hour: int = None):
+async def get_operation_parameters(heat_exchanger_id: int = 1, day: int = None, hour: int = None):
     try:
         # 验证参数
         if day and (day < 1 or day > 31):
@@ -102,9 +102,9 @@ async def get_operation_parameters(heat_exchanger_id: int = None, day: int = Non
         query = "SELECT * FROM operation_parameters WHERE 1=1"
         params = []
         
-        if heat_exchanger_id:
-            query += " AND heat_exchanger_id = %s"
-            params.append(heat_exchanger_id)
+        # 默认查询heat_exchanger_id=1的数据
+        query += " AND heat_exchanger_id = %s"
+        params.append(heat_exchanger_id)
         
         # 处理day和hour参数，转换为timestamp范围查询
         if day:
@@ -165,7 +165,7 @@ async def get_operation_parameters(heat_exchanger_id: int = None, day: int = Non
         )
 
 @app.get("/physical-parameters", summary="获取物理参数", description="获取物理参数数据")
-async def get_physical_parameters(heat_exchanger_id: int = None, day: int = None, hour: int = None):
+async def get_physical_parameters(heat_exchanger_id: int = 1, day: int = None, hour: int = None):
     try:
         # 验证参数
         if day and (day < 1 or day > 31):
@@ -177,9 +177,9 @@ async def get_physical_parameters(heat_exchanger_id: int = None, day: int = None
         query = "SELECT * FROM physical_parameters WHERE 1=1"
         params = []
         
-        if heat_exchanger_id:
-            query += " AND heat_exchanger_id = %s"
-            params.append(heat_exchanger_id)
+        # 默认查询heat_exchanger_id=1的数据
+        query += " AND heat_exchanger_id = %s"
+        params.append(heat_exchanger_id)
         
         # 处理day和hour参数，转换为timestamp范围查询
         if day:
@@ -240,7 +240,7 @@ async def get_physical_parameters(heat_exchanger_id: int = None, day: int = None
         )
 
 @app.get("/k-management", summary="获取K管理数据", description="获取K_lmtd数据")
-async def get_k_management(heat_exchanger_id: int = None, day: int = None, hour: int = None):
+async def get_k_management(heat_exchanger_id: int = 1, day: int = None, hour: int = None):
     try:
         # 验证参数
         if day and (day < 1 or day > 31):
@@ -252,9 +252,9 @@ async def get_k_management(heat_exchanger_id: int = None, day: int = None, hour:
         query = "SELECT * FROM k_management WHERE 1=1"
         params = []
         
-        if heat_exchanger_id:
-            query += " AND heat_exchanger_id = %s"
-            params.append(heat_exchanger_id)
+        # 默认查询heat_exchanger_id=1的数据
+        query += " AND heat_exchanger_id = %s"
+        params.append(heat_exchanger_id)
         
         # 处理day和hour参数，转换为timestamp范围查询
         if day:
@@ -315,7 +315,7 @@ async def get_k_management(heat_exchanger_id: int = None, day: int = None, hour:
         )
 
 @app.get("/performance", summary="获取性能数据", description="获取换热器性能数据")
-async def get_performance(heat_exchanger_id: int = None, day: int = None, hour: int = None):
+async def get_performance(heat_exchanger_id: int = 1, day: int = None, hour: int = None):
     try:
         # 验证参数
         if day and (day < 1 or day > 31):
@@ -327,9 +327,9 @@ async def get_performance(heat_exchanger_id: int = None, day: int = None, hour: 
         query = "SELECT * FROM performance_parameters WHERE 1=1"
         params = []
         
-        if heat_exchanger_id:
-            query += " AND heat_exchanger_id = %s"
-            params.append(heat_exchanger_id)
+        # 默认查询heat_exchanger_id=1的数据
+        query += " AND heat_exchanger_id = %s"
+        params.append(heat_exchanger_id)
         
         # 处理day和hour参数，转换为timestamp范围查询
         if day:
@@ -410,7 +410,7 @@ async def get_heat_exchangers():
         )
 
 @app.get("/model-parameters", summary="获取模型参数", description="获取模型参数数据")
-async def get_model_parameters(heat_exchanger_id: int = None, day: int = None):
+async def get_model_parameters(heat_exchanger_id: int = 1, day: int = None):
     try:
         # 验证参数
         if day and (day < 1 or day > 365):
@@ -420,9 +420,10 @@ async def get_model_parameters(heat_exchanger_id: int = None, day: int = None):
         query = "SELECT * FROM model_parameters WHERE 1=1"
         params = []
         
-        if heat_exchanger_id:
-            query += " AND heat_exchanger_id = %s"
-            params.append(heat_exchanger_id)
+        # 默认查询heat_exchanger_id=1的数据
+        query += " AND heat_exchanger_id = %s"
+        params.append(heat_exchanger_id)
+        
         if day:
             query += " AND day = %s"
             params.append(day)

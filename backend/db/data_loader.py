@@ -189,19 +189,14 @@ class DataLoader:
                 if velocity is not None and velocity > 0 and temperature is not None and temperature > 0:
                     flow_rate = self.calculate_flow_rate(velocity, temperature, side, heat_exchanger)
                     processed_record['flow_rate'] = flow_rate
-                    if flow_rate > 0:
-                        print(f"计算flow_rate: side={side}, velocity={velocity:.4f} m/s, temperature={temperature:.2f}°C, flow_rate={flow_rate:.6f} kg/s")
-                    else:
+                    # 移除flow_rate计算结果的输出
+                    if flow_rate <= 0:
                         # 如果计算结果为0，设置为一个很小的值避免NULL
                         processed_record['flow_rate'] = 0.0001
-                        print(f"警告: 计算出的flow_rate为0，设置为默认值0.0001")
                 else:
                     # 如果无法计算，设置为一个很小的值避免NULL
                     processed_record['flow_rate'] = 0.0001
-                    if velocity is None or velocity <= 0:
-                        print(f"警告: 无法计算flow_rate，velocity无效 (velocity={velocity})，设置为默认值0.0001")
-                    if temperature is None or temperature <= 0:
-                        print(f"警告: 无法计算flow_rate，temperature无效 (temperature={temperature})，设置为默认值0.0001")
+                    # 移除velocity和temperature无效的警告输出
             
             # 确保所有可能为None的字段都有默认值
             if processed_record.get('flow_rate') is None:
@@ -309,17 +304,34 @@ class DataLoader:
         if not data:
             return True
         
+        # 确保所有记录都有相同的字段
+        # 获取第一个记录的字段
+        fields = set(data[0].keys())
+        
+        # 过滤掉字段不一致的记录
+        filtered_data = []
+        for record in data:
+            if set(record.keys()) == fields:
+                filtered_data.append(record)
+            else:
+                # 打印不一致的字段信息以便调试
+                print(f"过滤掉字段不一致的记录: {record}")
+        
+        if not filtered_data:
+            print("没有有效的性能参数数据可以插入")
+            return True
+        
         # 构建插入语句，使用ON DUPLICATE KEY UPDATE避免重复键错误
-        columns = ', '.join(data[0].keys())
-        placeholders = ', '.join(['%s'] * len(data[0]))
+        columns = ', '.join(filtered_data[0].keys())
+        placeholders = ', '.join(['%s'] * len(filtered_data[0]))
         
         # 构建ON DUPLICATE KEY UPDATE子句
-        update_clause = ', '.join([f"{col} = VALUES({col})" for col in data[0].keys()])
+        update_clause = ', '.join([f"{col} = VALUES({col})" for col in filtered_data[0].keys()])
         query = f"INSERT INTO performance_parameters ({columns}) VALUES ({placeholders}) ON DUPLICATE KEY UPDATE {update_clause}"
         
         # 准备数据
         values = []
-        for record in data:
+        for record in filtered_data:
             values.append(tuple(record.values()))
         
         try:
@@ -434,7 +446,12 @@ class DataLoader:
             # 获取流速
             velocity = op_data.get('velocity', 0)
             if velocity is None or velocity <= 0:
-                print(f"警告: 运行参数中的流速无效 (velocity={velocity})，points={op_data.get('points')}, side={op_data.get('side')}")
+                velocity = 0
+                if op_data.get('side') == 'shell':
+                    op_data['velocity'] = 0  # 为壳侧流速设置默认值0
+                # 只保留关键警告信息
+                if op_data.get('side') != 'shell':  # 只对非壳侧打印警告
+                    print(f"警告: 运行参数中的流速无效 (velocity={velocity})，points={op_data.get('points')}, side={op_data.get('side')}")
             
             # 计算雷诺数和普朗特数
             Re = self.calculate_reynolds_number(
@@ -485,7 +502,7 @@ class DataLoader:
         query = """
         SELECT p.*, k.K_actual
         FROM physical_parameters p
-        JOIN k_management k ON p.heat_exchanger_id = k.heat_exchanger_id 
+        LEFT JOIN k_management k ON p.heat_exchanger_id = k.heat_exchanger_id 
                            AND p.timestamp = k.timestamp 
                            AND p.points = k.points 
                            AND p.side = k.side
@@ -605,10 +622,11 @@ class DataLoader:
         history_end_date = f"2022-01-{day-1:02d} 23:59:59"
         
         # 合并查询：当天的optimization_hours + 历史history_days天
+        # 使用LEFT JOIN替代INNER JOIN，确保即使k_management表中没有对应记录，也能获取physical_parameters表的数据
         query = """
         SELECT p.*, k.K_actual
         FROM physical_parameters p
-        JOIN k_management k ON p.heat_exchanger_id = k.heat_exchanger_id 
+        LEFT JOIN k_management k ON p.heat_exchanger_id = k.heat_exchanger_id 
                            AND p.timestamp = k.timestamp 
                            AND p.points = k.points 
                            AND p.side = k.side
@@ -697,3 +715,8 @@ class DataLoader:
             self.db_conn.rollback(self.db_conn.prod_db)
             return False
     
+
+
+
+
+
