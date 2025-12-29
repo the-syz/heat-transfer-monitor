@@ -480,13 +480,23 @@ class MainCalculator:
                 data['K_predicted'] = k_predicted_map.get(key, 0)
             
             # 更新k_management表
-            self.data_loader.update_k_management_with_predicted(k_management_data)
+            print(f"\n准备更新k_management表，共 {len(k_management_data)} 条记录")
+            if k_management_data:
+                print(f"第一条记录示例: {k_management_data[0]}")
+                print(f"K_predicted值示例: {k_management_data[0].get('K_predicted', '未找到')}")
+            success = self.data_loader.update_k_management_with_predicted(k_management_data)
+            print(f"更新k_management表结果: {success}")
         else:
             # stage1训练之前，K_predicted设为0
             for data in k_management_data:
                 data['K_predicted'] = 0
             # 将stage1训练之前的K_predicted=0更新到数据库
-            self.data_loader.update_k_management_with_predicted(k_management_data)
+            print(f"\n准备更新k_management表(stage1前)，共 {len(k_management_data)} 条记录")
+            if k_management_data:
+                print(f"第一条记录示例: {k_management_data[0]}")
+                print(f"K_predicted值示例: {k_management_data[0].get('K_predicted', '未找到')}")
+            success = self.data_loader.update_k_management_with_predicted(k_management_data)
+            print(f"更新k_management表结果: {success}")
 
         # 确保为所有performance_data添加alpha_i字段，即使没有model_params
         for data in performance_data:
