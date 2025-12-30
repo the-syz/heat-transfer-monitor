@@ -289,7 +289,7 @@ class MainCalculator:
         return k_lmtd_map
     
     def train_stage1(self):
-        """执行阶段1训练：使用training_days天的数据进行初始拟合"""
+        """执行阶段1训练：使用training_days天的数据进行初始拟合，按points分别训练"""
         print(f"开始阶段1训练，使用{self.training_days}天的数据...")
         
         # 获取阶段1训练数据
@@ -302,21 +302,52 @@ class MainCalculator:
             print("阶段1训练数据为空")
             return None
         
-        # 使用stage1进行初始拟合
-        a, p, b = self.nonlinear_calc.get_optimized_parameters(
-            training_data, 
-            stage='stage1',
-            adaptive_strategy='dynamic'
-        )
+        # 扫描所有数据，获取所有不同的points
+        all_points = sorted(set(data.get('points', 0) for data in training_data))
+        print(f"发现{len(all_points)}个不同的points: {all_points}")
         
-        # 将训练得到的参数作为这些天的训练得到的参数
-        self.model_params = {'a': a, 'p': p, 'b': b}
+        # 为每个points独立训练模型参数
+        self.points_model_params = {}
+        for points in all_points:
+            print(f"\n开始训练points={points}的模型...")
+            
+            # 过滤当前points的数据
+            points_data = [data for data in training_data if data.get('points') == points]
+            
+            if not points_data:
+                print(f"points={points}没有数据，跳过")
+                continue
+            
+            # 使用stage1进行初始拟合
+            a, p, b = self.nonlinear_calc.get_optimized_parameters(
+                points_data, 
+                stage='stage1',
+                adaptive_strategy='dynamic'
+            )
+            
+            # 保存当前points的模型参数
+            self.points_model_params[points] = {'a': a, 'p': p, 'b': b}
+            
+            # 将当前points的模型参数插入到model_parameters表
+            self.data_loader.insert_model_parameters(
+                {'a': a, 'p': p, 'b': b}, 
+                stage='stage1', 
+                training_days=self.training_days,
+                points=points,
+                side='tube'
+            )
+            
+            print(f"points={points}训练完成，参数: a={a:.6f}, p={p:.6f}, b={b:.6f}")
         
-        # 将模型参数插入到model_parameters表，传入training_days参数以生成对应天数的数据条目
-        self.data_loader.insert_model_parameters(self.model_params, stage='stage1', training_days=self.training_days)
+        # 更新all_points列表
+        self.all_points = sorted(self.points_model_params.keys())
+        print(f"\n阶段1训练完成，共训练{len(self.all_points)}个points: {self.all_points}")
         
-        print(f"阶段1训练完成，参数: a={a:.6f}, p={p:.6f}, b={b:.6f}")
-        return self.model_params
+        # 为了保持兼容性，设置model_params为第一个points的参数
+        if self.all_points:
+            self.model_params = self.points_model_params[self.all_points[0]]
+        
+        return self.points_model_params
     
     def train_stage2(self, optimization_data):
         """执行阶段2训练：使用新数据进行优化"""
@@ -347,7 +378,7 @@ class MainCalculator:
         return self.model_params
     
     def predict_k_and_alpha_i(self, data):
-        """预测K值和alpha_i值
+        """预测K值和alpha_i值，使用对应points的模型参数
         返回值: (k_predicted_map, alpha_i_map)
         """
         k_predicted_map = {}
@@ -362,13 +393,23 @@ class MainCalculator:
             points = record['points']
             Re = record.get('reynolds', 0)
             
-            if Re > 0 and self.model_params:
-                # 预测K值
-                K_pred = self.nonlinear_calc.predict_K(Re, self.model_params['a'], self.model_params['p'], self.model_params['b'])
+            # 获取当前points的模型参数
+            if points in self.points_model_params:
+                params = self.points_model_params[points]
+            elif self.model_params:
+                # 如果没有对应points的参数，使用默认参数（第一个points的参数）
+                params = self.model_params
+            else:
+                # 如果没有任何参数，跳过
+                continue
+            
+            if Re > 0:
+                # 使用当前points的参数预测K值
+                K_pred = self.nonlinear_calc.predict_K(Re, params['a'], params['p'], params['b'])
                 k_predicted_map[(heat_exchanger_id, timestamp, points)] = K_pred
                 
-                # 计算alpha_i
-                alpha_i = 1 / (self.model_params['a'] * np.power(Re, -self.model_params['p']))
+                # 使用当前points的参数计算alpha_i
+                alpha_i = 1 / (params['a'] * np.power(Re, -params['p']))
                 alpha_i_map[(heat_exchanger_id, timestamp, points)] = alpha_i
         
         return k_predicted_map, alpha_i_map
