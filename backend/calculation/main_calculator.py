@@ -49,10 +49,17 @@ class MainCalculator:
         # 初始化模型参数
         self.model_params = None
         
+        # 初始化points相关的模型参数存储
+        # 为每个points维护独立的模型参数
+        self.points_model_params = {}  # {points: {'a': a, 'p': p, 'b': b}}
+        self.all_points = []  # 存储所有可用的points列表
+        
         # 计算换热面积
         self.calculate_heat_exchanger_area()
         
         # 尝试从数据库加载已训练的模型参数
+        self.load_model_parameters_from_db()
+        
         try:
             # 查询最新的模型参数
             query = "SELECT a, p, b FROM model_parameters ORDER BY timestamp DESC LIMIT 1"
