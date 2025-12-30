@@ -96,6 +96,48 @@ class MainCalculator:
         with open(self.config_file, 'r', encoding='utf-8') as f:
             return json.load(f)
     
+    def load_model_parameters_from_db(self):
+        """从数据库加载按points分组的模型参数"""
+        try:
+            # 查询所有points的模型参数
+            query = """
+            SELECT points, a, p, b, timestamp 
+            FROM model_parameters 
+            WHERE side = 'tube'
+            ORDER BY points DESC, timestamp DESC
+            """
+            self.db_conn.prod_cursor.execute(query)
+            results = self.db_conn.prod_cursor.fetchall()
+            
+            if results:
+                # 为每个points获取最新的模型参数
+                seen_points = set()
+                for row in results:
+                    points = row[0]
+                    if points not in seen_points:
+                        seen_points.add(points)
+                        self.points_model_params[points] = {
+                            'a': row[1],
+                            'p': row[2],
+                            'b': row[3]
+                        }
+                        print(f"从数据库加载points={points}的模型参数: a={row[1]:.6f}, p={row[2]:.6f}, b={row[3]:.6f}")
+                
+                self.all_points = sorted(self.points_model_params.keys())
+                print(f"共加载{len(self.all_points)}个points的模型参数: {self.all_points}")
+                
+                # 如果有points的参数，设置model_params为第一个points的参数（保持兼容性）
+                if self.all_points:
+                    self.model_params = self.points_model_params[self.all_points[0]]
+            else:
+                print("数据库中没有找到模型参数")
+                self.points_model_params = {}
+                self.all_points = []
+        except Exception as e:
+            print(f"加载模型参数失败: {e}")
+            self.points_model_params = {}
+            self.all_points = []
+    
     def calculate_heat_exchanger_area(self):
         """计算换热面积"""
         # 优先使用数据库中已有的换热面积
