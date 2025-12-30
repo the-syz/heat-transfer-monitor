@@ -514,15 +514,13 @@ class DataLoader:
             return self.db_conn.fetch_all(self.db_conn.prod_cursor)
         return []
     
-    def insert_model_parameters(self, model_params, stage, training_days=None, points=None, side='tube'):
+    def insert_model_parameters(self, model_params, stage, training_days=None):
         """将模型参数插入到model_parameters表
         
         参数:
             model_params: 模型参数字典，包含a, p, b
             stage: 训练阶段（'stage1'或'stage2'）
             training_days: 训练天数，用于生成对应数量的数据条目
-            points: 测量点（壳侧不同分段）
-            side: 侧标识，固定为'tube'
         """
         # 准备要插入的数据列表
         data_list = []
@@ -537,8 +535,6 @@ class DataLoader:
                     'a': model_params['a'],
                     'p': model_params['p'],
                     'b': model_params['b'],
-                    'points': points,
-                    'side': side,
                     'heat_exchanger_id': 1  # 默认换热器ID为1
                 }
                 data_list.append(data)
@@ -550,8 +546,6 @@ class DataLoader:
                 'a': model_params['a'],
                 'p': model_params['p'],
                 'b': model_params['b'],
-                'points': points,
-                'side': side,
                 'heat_exchanger_id': 1  # 默认换热器ID为1
             }
             data_list.append(data)
@@ -745,7 +739,6 @@ class DataLoader:
             self.db_conn.rollback(self.db_conn.prod_db)
             return False
     
-
 
 
 

@@ -48,26 +48,6 @@ async def init_db():
                             print(f"添加字段 {field_name} 时出错: {e}")
                     else:
                         print(f"字段 {field_name} 已存在，跳过")
-                
-                # 检查并添加model_parameters表的新字段
-                await cursor.execute("DESCRIBE model_parameters")
-                existing_model_columns = {row[0] for row in await cursor.fetchall()}
-                
-                model_new_fields = [
-                    ("points", "INT NULL COMMENT '测量点（整型），壳侧不同分段'"),
-                    ("side", "VARCHAR(50) NULL COMMENT '侧标识，固定为tube'")
-                ]
-                
-                for field_name, field_def in model_new_fields:
-                    if field_name not in existing_model_columns:
-                        try:
-                            stmt = f"ALTER TABLE model_parameters ADD COLUMN {field_name} {field_def}"
-                            await cursor.execute(stmt)
-                            print(f"已添加model_parameters字段: {field_name}")
-                        except Exception as e:
-                            print(f"添加model_parameters字段 {field_name} 时出错: {e}")
-                    else:
-                        print(f"model_parameters字段 {field_name} 已存在，跳过")
     except Exception as e:
         print(f"添加新字段时出错: {e}")
         # 如果出错，继续执行，让Tortoise处理
@@ -127,4 +107,3 @@ async def init_db():
 
 if __name__ == "__main__":
     run_async(init_db())
-
