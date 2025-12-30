@@ -5,7 +5,7 @@
     "start_day": 1,
     "start_hour": 0,
     "total_hours": 24,
-    "output_dir": "../output",
+    "output_dir": "./output",
     "output_format": "txt",
     "database": {
         "test": {

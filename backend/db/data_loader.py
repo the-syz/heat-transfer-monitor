@@ -514,29 +514,53 @@ class DataLoader:
             return self.db_conn.fetch_all(self.db_conn.prod_cursor)
         return []
     
-    def insert_model_parameters(self, model_params, stage):
-        """将模型参数插入到model_parameters表"""
-        # 获取当前时间
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    def insert_model_parameters(self, model_params, stage, training_days=None):
+        """将模型参数插入到model_parameters表
         
-        # 构建数据
-        data = {
-            'timestamp': current_time,
-            'a': model_params['a'],
-            'p': model_params['p'],
-            'b': model_params['b'],
-            'stage': stage
-        }
+        参数:
+            model_params: 模型参数字典，包含a, p, b
+            stage: 训练阶段（'stage1'或'stage2'）
+            training_days: 训练天数，用于生成对应数量的数据条目
+        """
+        # 准备要插入的数据列表
+        data_list = []
+        
+        # 如果指定了training_days，则为每一天生成一条记录
+        if training_days:
+            for day in range(1, training_days + 1):
+                # 使用每天03:00的时间戳
+                timestamp = f"2022-01-{day:02d} 03:00:00"
+                data = {
+                    'timestamp': timestamp,
+                    'a': model_params['a'],
+                    'p': model_params['p'],
+                    'b': model_params['b'],
+                    'heat_exchanger_id': 1  # 默认换热器ID为1
+                }
+                data_list.append(data)
+        else:
+            # 如果没有指定training_days，只插入一条记录，使用当前时间
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            data = {
+                'timestamp': current_time,
+                'a': model_params['a'],
+                'p': model_params['p'],
+                'b': model_params['b'],
+                'heat_exchanger_id': 1  # 默认换热器ID为1
+            }
+            data_list.append(data)
         
         # 构建插入语句
-        columns = ', '.join(data.keys())
-        placeholders = ', '.join(['%s'] * len(data))
+        columns = ', '.join(data_list[0].keys())
+        placeholders = ', '.join(['%s'] * len(data_list[0]))
         query = f"INSERT INTO model_parameters ({columns}) VALUES ({placeholders})"
         
         try:
-            # 插入到生产数据库
-            self.db_conn.prod_cursor.execute(query, tuple(data.values()))
+            # 批量插入到生产数据库
+            values = [tuple(data.values()) for data in data_list]
+            self.db_conn.prod_cursor.executemany(query, values)
             self.db_conn.commit(self.db_conn.prod_db)
+            print(f"成功插入{len(data_list)}条模型参数记录")
             return True
         except Exception as e:
             print(f"插入模型参数失败: {e}")
@@ -715,6 +739,8 @@ class DataLoader:
             self.db_conn.rollback(self.db_conn.prod_db)
             return False
     
+
+
 
 
 

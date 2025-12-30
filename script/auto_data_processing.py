@@ -86,9 +86,8 @@ def check_output_dir(output_dir):
 # 保存数据到文件
 def save_data_to_file(data: Dict[str, Any], output_dir: str, hour: int, day: int):
     """将数据保存到TXT文件"""
-    # 生成文件名
-    timestamp = f"{day:02d}_{hour:02d}"
-    filename = f"performance_{timestamp}.txt"
+    # 生成文件名 - 使用与测试脚本一致的格式
+    filename = f"day{day}_hour{hour}.txt"
     file_path = os.path.join(output_dir, filename)
     
     try:
@@ -325,6 +324,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

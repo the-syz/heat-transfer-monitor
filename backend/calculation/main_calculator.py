@@ -5,8 +5,8 @@ from datetime import datetime
 import pandas as pd
 from .lmtd_calculator import LMTDCalculator
 from .nonlinear_regression import NonlinearRegressionCalculator
-from ..db.data_loader import DataLoader
-from ..db.db_connection import DatabaseConnection
+from db.data_loader import DataLoader
+from db.db_connection import DatabaseConnection
 
 class MainCalculator:
     def __init__(self, config_file):
@@ -263,8 +263,8 @@ class MainCalculator:
         # 将训练得到的参数作为这些天的训练得到的参数
         self.model_params = {'a': a, 'p': p, 'b': b}
         
-        # 将模型参数插入到model_parameters表
-        self.data_loader.insert_model_parameters(self.model_params, stage='stage1')
+        # 将模型参数插入到model_parameters表，传入training_days参数以生成对应天数的数据条目
+        self.data_loader.insert_model_parameters(self.model_params, stage='stage1', training_days=self.training_days)
         
         print(f"阶段1训练完成，参数: a={a:.6f}, p={p:.6f}, b={b:.6f}")
         return self.model_params
@@ -350,6 +350,11 @@ class MainCalculator:
         # 计算物理参数（处理所有侧的数据）
         processed_data = self.data_loader.process_operation_data(operation_data, physical_data, self.heat_exchanger)
         
+        # 将计算得到的物理参数插入到生产数据库
+        if not self.data_loader.insert_physical_parameters(processed_data):
+            print("插入物理参数失败")
+            return False
+
         # 过滤tube侧数据，不区分大小写，用于后续模型训练和K_predicted计算
         tube_processed_data = [data for data in processed_data if data.get('side', '').lower() == 'tube']
 
@@ -635,20 +640,8 @@ class MainCalculator:
             else:
                 K_predicted = 0
             
-            # 确保K值始终有一个有效的数值
-            if self.reprocessing_history and self.model_params:
-                data['K'] = K_predicted or 0
-            # 阶段1优化中的所有K值按K_actual写
-            elif self.stage == 1:
-                data['K'] = K_actual or 0
-            # 阶段2中optimization_hours前的K用K_actual，该天其他时间用K_predicted
-            else:
-                # 获取当前小时
-                current_hour = hour
-                if current_hour < self.optimization_hours:
-                    data['K'] = K_actual or 0
-                else:
-                    data['K'] = K_predicted or 0
+            # 始终使用K_predicted值填充K字段
+            data['K'] = K_predicted or 0
         
         # 检查performance_data中的数据
         if performance_data:

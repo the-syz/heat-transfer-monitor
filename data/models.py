@@ -95,13 +95,15 @@ class ModelParameter(Model):
     id = fields.IntField(pk=True, description="主键")
     heat_exchanger = fields.ForeignKeyField("models.HeatExchanger", related_name="model_parameters", description="外键，连接换热器表")
     timestamp = fields.DatetimeField(description="时间戳，每天三点更新一次")
+    points = fields.IntField(description="测量点（整型），壳侧不同分段")
+    side = fields.CharEnumField(SideEnum, description="侧标识，固定为tube")
     a = fields.FloatField(description="模型参数a")
     p = fields.FloatField(description="模型参数p")
     b = fields.FloatField(description="模型参数b")
 
     class Meta:
         table = "model_parameters"
-        unique_together = ("heat_exchanger", "timestamp")
+        unique_together = ("heat_exchanger", "timestamp", "points", "side")
 
 
 # 新增：总传热系数管理表
