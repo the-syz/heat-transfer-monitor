@@ -638,8 +638,15 @@ class DataLoader:
             return result['count'] if result else 0
         return 0
     
-    def get_optimization_data_for_stage2(self, day, optimization_hours, history_days):
-        """获取阶段2优化数据，包括当天的optimization_hours和历史数据"""
+    def get_optimization_data_for_stage2(self, day, optimization_hours, history_days, points=None):
+        """获取阶段2优化数据，包括当天的optimization_hours和历史数据
+        
+        Args:
+            day: 当前天数
+            optimization_hours: 当天优化的小时数
+            history_days: 历史数据天数
+            points: 指定points，如果为None则获取所有points的数据
+        """
         # 获取当天的optimization_hours数据
         day_start_date = f"2022-01-{day:02d} 00:00:00"
         day_end_date = f"2022-01-{day:02d} {optimization_hours-1:02d}:59:59"
@@ -649,8 +656,7 @@ class DataLoader:
         history_start_date = f"2022-01-{history_start_day:02d} 00:00:00"
         history_end_date = f"2022-01-{day-1:02d} 23:59:59"
         
-        # 合并查询：当天的optimization_hours + 历史history_days天
-        # 使用LEFT JOIN替代INNER JOIN，确保即使k_management表中没有对应记录，也能获取physical_parameters表的数据
+        # 构建基础查询
         query = """
         SELECT p.*, k.K_actual
         FROM physical_parameters p
@@ -658,10 +664,18 @@ class DataLoader:
                            AND p.timestamp = k.timestamp 
                            AND p.points = k.points 
                            AND p.side = k.side
-        WHERE (p.timestamp BETWEEN %s AND %s)
-           OR (p.timestamp BETWEEN %s AND %s)
+        WHERE ((p.timestamp BETWEEN %s AND %s)
+           OR (p.timestamp BETWEEN %s AND %s))
         """
-        params = (day_start_date, day_end_date, history_start_date, history_end_date)
+        params = [day_start_date, day_end_date, history_start_date, history_end_date]
+        
+        # 如果指定了points，添加points过滤条件
+        if points is not None:
+            query += " AND p.points = %s"
+            params.append(points)
+        
+        # 按时间排序
+        query += " ORDER BY p.timestamp"
         
         if self.db_conn.execute_query(self.db_conn.prod_cursor, query, params):
             return self.db_conn.fetch_all(self.db_conn.prod_cursor)
@@ -743,6 +757,7 @@ class DataLoader:
             self.db_conn.rollback(self.db_conn.prod_db)
             return False
     
+
 
 
 

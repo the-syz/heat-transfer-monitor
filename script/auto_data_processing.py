@@ -49,7 +49,7 @@ def setup_logging():
     
     # 创建控制台处理器
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.WARNING)  # 控制台日志提高到WARNING级别，减少输出
+    console_handler.setLevel(logging.INFO)  # 控制台日志改为INFO级别,显示调试信息
     
     # 设置日志格式
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -91,17 +91,24 @@ def save_data_to_file(data: Dict[str, Any], output_dir: str, hour: int, day: int
     file_path = os.path.join(output_dir, filename)
     
     try:
+        # 调试信息: 打印接收到的数据
+        logger.info(f"save_data_to_file调用 - day={day}, hour={hour}")
+        logger.info(f"数据类型: {type(data)}")
+        logger.info(f"数据内容: {data}")
+        
         # 转换数据为字符串格式
         lines = []
         lines.append(f"=== 性能数据 - 第{day}天第{hour}小时 ===\n")
         
         if "data" in data and data["data"]:
+            logger.info(f"找到data字段,包含{len(data['data'])}条记录")
             for i, record in enumerate(data["data"]):
                 lines.append(f"记录 {i+1}:")
                 for key, value in record.items():
                     lines.append(f"  {key}: {value}")
                 lines.append("")
         else:
+            logger.warning(f"没有找到data字段或data为空: 'data' in data = {'data' in data}, data.get('data') = {data.get('data')}")
             lines.append("没有性能数据\n")
         
         # 保存到文件
@@ -111,6 +118,8 @@ def save_data_to_file(data: Dict[str, Any], output_dir: str, hour: int, day: int
         logger.info(f"数据已保存到: {file_path}")
     except Exception as e:
         logger.error(f"保存数据到文件失败: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
 
 # API调用函数
 def call_api(api_url: str, endpoint: str, params: Dict[str, Any] = None, retries: int = 3):
@@ -324,6 +333,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 
 
 

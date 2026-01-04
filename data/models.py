@@ -121,4 +121,4 @@ class KManagement(Model):
     class Meta:
         table = "k_management"
         unique_together = ("heat_exchanger", "timestamp", "points", "side")
-
+

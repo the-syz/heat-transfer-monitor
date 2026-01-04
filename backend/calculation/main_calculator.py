@@ -349,8 +349,14 @@ class MainCalculator:
         
         return self.points_model_params
     
-    def train_stage2(self, optimization_data):
-        """执行阶段2训练：使用新数据进行优化"""
+    def train_stage2(self, optimization_data, day, points=None):
+        """执行阶段2训练：使用新数据进行优化，支持动态权重和自适应策略
+        
+        参数:
+            optimization_data: 优化数据
+            day: 当前天数
+            points: 当前points（用于分points训练）
+        """
         print(f"开始阶段2训练，使用{len(optimization_data)}条数据...")
         
         # 过滤tube侧数据，不区分大小写
@@ -360,23 +366,115 @@ class MainCalculator:
             print("阶段2训练数据为空")
             return self.model_params
         
-        # 使用stage2进行精确优化
+        # 如果指定了points，过滤当前points的数据
+        if points is not None:
+            optimization_data = [data for data in optimization_data if data.get('points') == points]
+            if not optimization_data:
+                print(f"points={points}的阶段2训练数据为空")
+                return self.points_model_params.get(points, self.model_params)
+        
+        # 获取当前模型参数
+        if points is not None and points in self.points_model_params:
+            current_params = self.points_model_params[points]
+        else:
+            current_params = self.model_params
+        
+        # 计算历史误差，用于选择自适应策略
+        mean_rel_error = self.calculate_mean_relative_error(optimization_data, current_params)
+        
+        # 根据历史误差情况选择自适应策略
+        if mean_rel_error > 20.0:
+            adaptive_strategy = 'conservative'  # 误差较大时使用保守策略
+        elif mean_rel_error < 8.0:
+            adaptive_strategy = 'aggressive'  # 误差较小时使用激进策略
+        else:
+            adaptive_strategy = 'dynamic'  # 默认使用动态策略
+        
+        print(f"当前平均相对误差: {mean_rel_error:.2f}%，使用自适应策略: {adaptive_strategy}")
+        
+        # 使用stage2进行精确优化，传入自适应策略
         a_opt, p_opt, b_opt = self.nonlinear_calc.get_optimized_parameters(
             optimization_data, 
-            initial_params=[self.model_params['a'], self.model_params['p'], self.model_params['b']],
+            initial_params=[current_params['a'], current_params['p'], current_params['b']],
             stage='stage2',
-            adaptive_strategy='dynamic'
+            adaptive_strategy=adaptive_strategy
         )
         
         # 更新模型参数
-        self.model_params = {'a': a_opt, 'p': p_opt, 'b': b_opt}
+        new_params = {'a': a_opt, 'p': p_opt, 'b': b_opt}
         
-        # 将模型参数插入到model_parameters表
-        self.data_loader.insert_model_parameters(self.model_params, stage='stage2')
+        if points is not None:
+            # 更新当前points的模型参数
+            self.points_model_params[points] = new_params
+            # 将模型参数插入到model_parameters表
+            self.data_loader.insert_model_parameters(
+                new_params, 
+                stage='stage2', 
+                training_days=day,
+                points=points,
+                side='tube'
+            )
+            print(f"points={points}阶段2训练完成，参数: a={a_opt:.6f}, p={p_opt:.6f}, b={b_opt:.6f}")
+        else:
+            # 更新全局模型参数
+            self.model_params = new_params
+            # 将模型参数插入到model_parameters表
+            self.data_loader.insert_model_parameters(new_params, stage='stage2')
+            print(f"阶段2训练完成，参数: a={a_opt:.6f}, p={p_opt:.6f}, b={b_opt:.6f}")
         
-        print(f"阶段2训练完成，参数: a={a_opt:.6f}, p={p_opt:.6f}, b={b_opt:.6f}")
-        return self.model_params
+        return new_params
     
+    def calculate_mean_relative_error(self, data, params):
+        """计算平均相对误差
+        
+        参数:
+            data: 数据列表
+            params: 模型参数字典
+            
+        返回值:
+            平均相对误差（百分比）
+        """
+        if not data or not params:
+            return 0.0
+        
+        try:
+            # 计算预测值和实际值
+            predicted_values = []
+            actual_values = []
+            
+            for record in data:
+                Re = record.get('reynolds', 0)
+                K_actual = record.get('K_lmtd', 0) or record.get('K', 0)
+                
+                if Re > 0 and K_actual > 0:
+                    # 使用模型参数预测K值
+                    K_predicted = self.nonlinear_calc.calculate_predicted_K(
+                        Re, 
+                        params['a'], 
+                        params['p'], 
+                        params['b']
+                    )
+                    
+                    if K_predicted > 0:
+                        predicted_values.append(K_predicted)
+                        actual_values.append(K_actual)
+            
+            # 计算相对误差
+            if predicted_values and actual_values:
+                predicted_values = np.array(predicted_values)
+                actual_values = np.array(actual_values)
+                
+                absolute_errors = np.abs(predicted_values - actual_values)
+                relative_errors = absolute_errors / actual_values * 100
+                mean_rel_error = np.mean(relative_errors)
+                
+                return mean_rel_error
+            else:
+                return 0.0
+        except Exception as e:
+            print(f"计算平均相对误差时发生错误: {e}")
+            return 0.0
+
     def predict_k_and_alpha_i(self, data):
         """预测K值和alpha_i值，使用对应points的模型参数
         返回值: (k_predicted_map, alpha_i_map)
@@ -628,63 +726,100 @@ class MainCalculator:
             # 在optimization_hours之后执行阶段2训练（例如第3小时之后）
             if hour == self.optimization_hours:
                 print(f"第{day}天已读取{self.optimization_hours}小时数据，触发阶段2优化")
-                # 获取优化数据：当天的optimization_hours + 历史history_days天
-                optimization_data = self.data_loader.get_optimization_data_for_stage2(
-                    day, self.optimization_hours, self.history_days
-                )
-                if optimization_data:
-                    # 执行阶段2训练
-                    self.train_stage2(optimization_data)
-                    print(f"阶段2优化完成，开始重新计算第{day}天所有小时的K_predicted...")
-                    # 重新处理当天的所有小时，更新K_predicted
-                    for reprocess_hour in range(24):
-                        # 获取该小时的数据
-                        hour_operation_data = self.data_loader.get_operation_parameters_by_hour(day, reprocess_hour)
-                        if hour_operation_data:
-                            hour_physical_data = self.data_loader.get_physical_parameters_by_hour(day, reprocess_hour)
-                            hour_processed_data = self.data_loader.process_operation_data(
-                                hour_operation_data, hour_physical_data, self.heat_exchanger
-                            )
-                            hour_tube_data = [d for d in hour_processed_data if d.get('side', '').lower() == 'tube']
-                            if hour_tube_data:
-                                # 重新计算K_predicted
-                                hour_k_predicted_map, hour_alpha_i_map = self.predict_k_and_alpha_i(hour_tube_data)
-                                # 更新k_management
-                                hour_k_management = []
-                                for d in hour_tube_data:
-                                    key = (d['heat_exchanger_id'], d['timestamp'], d['points'])
-                                    hour_k_management.append({
+                
+                # 如果启用了分points训练，为每个points独立训练
+                if self.all_points:
+                    print(f"开始分points阶段2训练，共{len(self.all_points)}个points")
+                    
+                    for points in self.all_points:
+                        print(f"\n开始训练points={points}的阶段2优化...")
+                        
+                        # 获取优化数据：当天的optimization_hours + 历史history_days天
+                        optimization_data = self.data_loader.get_optimization_data_for_stage2(
+                            day, self.optimization_hours, self.history_days
+                        )
+                        
+                        if optimization_data:
+                            # 过滤当前points的数据
+                            points_optimization_data = [
+                                data for data in optimization_data 
+                                if data.get('points') == points
+                            ]
+                            
+                            if points_optimization_data:
+                                # 执行当前points的阶段2训练
+                                self.train_stage2(points_optimization_data, day, points=points)
+                                print(f"points={points}阶段2优化完成")
+                            else:
+                                print(f"points={points}没有优化数据，跳过")
+                        else:
+                            print(f"第{day}天没有足够的优化数据，跳过points={points}的阶段2训练")
+                    
+                    print(f"\n所有points的阶段2优化完成，开始重新计算第{day}天所有小时的K_predicted...")
+                else:
+                    # 不分points训练，使用原有逻辑
+                    print(f"开始全局阶段2训练...")
+                    
+                    # 获取优化数据：当天的optimization_hours + 历史history_days天
+                    optimization_data = self.data_loader.get_optimization_data_for_stage2(
+                        day, self.optimization_hours, self.history_days
+                    )
+                    
+                    if optimization_data:
+                        # 执行阶段2训练
+                        self.train_stage2(optimization_data, day)
+                        print(f"阶段2优化完成")
+                    else:
+                        print(f"第{day}天没有足够的优化数据，跳过阶段2训练")
+                
+                # 重新处理当天的所有小时，更新K_predicted
+                for reprocess_hour in range(24):
+                    # 获取该小时的数据
+                    hour_operation_data = self.data_loader.get_operation_parameters_by_hour(day, reprocess_hour)
+                    if hour_operation_data:
+                        hour_physical_data = self.data_loader.get_physical_parameters_by_hour(day, reprocess_hour)
+                        hour_processed_data = self.data_loader.process_operation_data(
+                            hour_operation_data, hour_physical_data, self.heat_exchanger
+                        )
+                        hour_tube_data = [d for d in hour_processed_data if d.get('side', '').lower() == 'tube']
+                        if hour_tube_data:
+                            # 重新计算K_predicted
+                            hour_k_predicted_map, hour_alpha_i_map = self.predict_k_and_alpha_i(hour_tube_data)
+                            # 更新k_management
+                            hour_k_management = []
+                            for d in hour_tube_data:
+                                key = (d['heat_exchanger_id'], d['timestamp'], d['points'])
+                                hour_k_management.append({
+                                    'heat_exchanger_id': d['heat_exchanger_id'],
+                                    'timestamp': d['timestamp'],
+                                    'points': d['points'],
+                                    'side': d['side'],
+                                    'K_predicted': hour_k_predicted_map.get(key, 0)
+                                })
+                            if hour_k_management:
+                                self.data_loader.update_k_management_with_predicted(hour_k_management)
+                            
+                            # 更新performance_parameters表的K值
+                            hour_perf_update = []
+                            for d in hour_tube_data:
+                                key = (d['heat_exchanger_id'], d['timestamp'], d['points'])
+                                K_predicted = hour_k_predicted_map.get(key, 0)
+                                if K_predicted > 0:
+                                    hour_perf_update.append({
                                         'heat_exchanger_id': d['heat_exchanger_id'],
                                         'timestamp': d['timestamp'],
                                         'points': d['points'],
                                         'side': d['side'],
-                                        'K_predicted': hour_k_predicted_map.get(key, 0)
+                                        'K': K_predicted
                                     })
-                                if hour_k_management:
-                                    self.data_loader.update_k_management_with_predicted(hour_k_management)
-                                
-                                # 更新performance_parameters表的K值
-                                hour_perf_update = []
-                                for d in hour_tube_data:
-                                    key = (d['heat_exchanger_id'], d['timestamp'], d['points'])
-                                    K_predicted = hour_k_predicted_map.get(key, 0)
-                                    if K_predicted > 0:
-                                        hour_perf_update.append({
-                                            'heat_exchanger_id': d['heat_exchanger_id'],
-                                            'timestamp': d['timestamp'],
-                                            'points': d['points'],
-                                            'side': d['side'],
-                                            'K': K_predicted
-                                        })
-                                if hour_perf_update:
-                                    self.data_loader.update_performance_parameters_k(hour_perf_update)
+                            if hour_perf_update:
+                                self.data_loader.update_performance_parameters_k(hour_perf_update)
                 else:
                     print(f"第{day}天没有足够的优化数据，跳过阶段2训练")
                 # 调用stage2完成回调
                 if self.on_stage2_complete_callback:
                     self.on_stage2_complete_callback(day)
             
-            # 检查误差，如果达到阈值，重新进入stage1
             if hour == 23 and day > self.training_days:
                 avg_error = self.data_loader.calculate_average_error(day)
                 print(f"第{day}天平均误差: {avg_error:.2f}%")

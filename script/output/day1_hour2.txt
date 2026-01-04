@@ -1,0 +1,422 @@
+=== 性能数据 - 第1天第2小时 ===
+
+记录 1:
+  id: 61
+  timestamp: 2022-01-01T02:00:00
+  points: 1
+  side: tube
+  K: 0.0
+  alpha_i: 0.0
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 2:
+  id: 62
+  timestamp: 2022-01-01T02:00:00
+  points: 2
+  side: tube
+  K: 1014.26310616277
+  alpha_i: 1196.2617263092839
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 3:
+  id: 63
+  timestamp: 2022-01-01T02:00:00
+  points: 3
+  side: tube
+  K: 1020.1222624008642
+  alpha_i: 1470.4268650639056
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 4:
+  id: 64
+  timestamp: 2022-01-01T02:00:00
+  points: 4
+  side: tube
+  K: 1023.6228194678905
+  alpha_i: 1209.303403370411
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 5:
+  id: 65
+  timestamp: 2022-01-01T02:00:00
+  points: 5
+  side: tube
+  K: 1026.3272784168553
+  alpha_i: 1302.211782693317
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 6:
+  id: 66
+  timestamp: 2022-01-01T02:00:00
+  points: 6
+  side: tube
+  K: 1029.0888975905225
+  alpha_i: 1216.939780101297
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 7:
+  id: 67
+  timestamp: 2022-01-01T02:00:00
+  points: 7
+  side: tube
+  K: 1030.459871230374
+  alpha_i: 1966.5249776076282
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 8:
+  id: 68
+  timestamp: 2022-01-01T02:00:00
+  points: 8
+  side: tube
+  K: 1034.5045601232316
+  alpha_i: 1312.9465622097014
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 9:
+  id: 69
+  timestamp: 2022-01-01T02:00:00
+  points: 9
+  side: tube
+  K: 1038.6815017051206
+  alpha_i: 1230.376971817785
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 10:
+  id: 70
+  timestamp: 2022-01-01T02:00:00
+  points: 10
+  side: tube
+  K: 1041.1423292324284
+  alpha_i: 1233.8314520056347
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 11:
+  id: 71
+  timestamp: 2022-01-01T02:00:00
+  points: 11
+  side: tube
+  K: 1044.9590384029943
+  alpha_i: 1289.4937162881176
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 12:
+  id: 72
+  timestamp: 2022-01-01T02:00:00
+  points: 12
+  side: tube
+  K: 780.6700582330366
+  alpha_i: 884.2116978847382
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 13:
+  id: 73
+  timestamp: 2022-01-01T02:00:00
+  points: 13
+  side: tube
+  K: 1047.929540802786
+  alpha_i: 1243.3749403450001
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 14:
+  id: 74
+  timestamp: 2022-01-01T02:00:00
+  points: 14
+  side: tube
+  K: 1052.2658466645219
+  alpha_i: 1249.484293931737
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 15:
+  id: 75
+  timestamp: 2022-01-01T02:00:00
+  points: 15
+  side: tube
+  K: 1054.5069170073923
+  alpha_i: 1331.716860697977
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 16:
+  id: 76
+  timestamp: 2022-01-01T02:00:00
+  points: 16
+  side: tube
+  K: 1055.2175030071846
+  alpha_i: 1495.399430502532
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 17:
+  id: 77
+  timestamp: 2022-01-01T02:00:00
+  points: 17
+  side: tube
+  K: 1057.902509823409
+  alpha_i: 1500.5181818651458
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 18:
+  id: 78
+  timestamp: 2022-01-01T02:00:00
+  points: 18
+  side: tube
+  K: 1062.1237768845665
+  alpha_i: 1263.4081527219323
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 19:
+  id: 79
+  timestamp: 2022-01-01T02:00:00
+  points: 19
+  side: tube
+  K: 1064.8702685100047
+  alpha_i: 1267.2961705170305
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 20:
+  id: 80
+  timestamp: 2022-01-01T02:00:00
+  points: 20
+  side: tube
+  K: 1075.1612421678208
+  alpha_i: 1285.1258093919928
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 21:
+  id: 81
+  timestamp: 2022-01-01T02:00:00
+  points: 21
+  side: tube
+  K: 1076.779189996388
+  alpha_i: 1485.7086220967847
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 22:
+  id: 82
+  timestamp: 2022-01-01T02:00:00
+  points: 22
+  side: tube
+  K: 1082.2121895363566
+  alpha_i: 1436.9832474459295
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 23:
+  id: 83
+  timestamp: 2022-01-01T02:00:00
+  points: 23
+  side: tube
+  K: 1005.7926666527565
+  alpha_i: 1184.496324125079
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 24:
+  id: 84
+  timestamp: 2022-01-01T02:00:00
+  points: 24
+  side: tube
+  K: 1084.9676306333533
+  alpha_i: 1403.7501144708078
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 25:
+  id: 85
+  timestamp: 2022-01-01T02:00:00
+  points: 25
+  side: tube
+  K: 1007.5863147915653
+  alpha_i: 1186.9847538716638
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 26:
+  id: 86
+  timestamp: 2022-01-01T02:00:00
+  points: 26
+  side: tube
+  K: 1009.7818705265198
+  alpha_i: 1190.0329208466148
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 27:
+  id: 87
+  timestamp: 2022-01-01T02:00:00
+  points: 27
+  side: tube
+  K: 1011.2355783083085
+  alpha_i: 1304.028829644114
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 28:
+  id: 88
+  timestamp: 2022-01-01T02:00:00
+  points: 28
+  side: tube
+  K: 1013.7217228321825
+  alpha_i: 1258.5148591078869
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 29:
+  id: 89
+  timestamp: 2022-01-01T02:00:00
+  points: 29
+  side: tube
+  K: 1015.9353260068008
+  alpha_i: 1209.6944312557807
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
+记录 30:
+  id: 90
+  timestamp: 2022-01-01T02:00:00
+  points: 30
+  side: tube
+  K: 1018.5276492585369
+  alpha_i: 1202.1985130787714
+  alpha_o: 5000.0
+  heat_duty: 0.0
+  effectiveness: None
+  lmtd: 14.669897853862453
+  fouling_resistance: 4.24402e-06
+  heat_exchanger_id: 1
+
