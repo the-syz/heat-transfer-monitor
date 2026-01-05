@@ -29,10 +29,15 @@ export default [
         document: 'readonly',
         navigator: 'readonly',
         console: 'readonly',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
         setTimeout: 'readonly',
         setInterval: 'readonly',
         clearTimeout: 'readonly',
-        clearInterval: 'readonly'
+        clearInterval: 'readonly',
+        CustomEvent: 'readonly',
+        Event: 'readonly',
+        fetch: 'readonly'
       }
     },
     rules: {
@@ -57,3 +62,4 @@ export default [
     ignores: ['dist/**', 'node_modules/**', '*.config.js']
   }
 ]
+
