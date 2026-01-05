@@ -7,10 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "build:staging": "vite build --mode staging",
+    "build:production": "vite build --mode production",
     "prepare": "husky install",
     "commit": "git-cz",
     "lint": "eslint --ext .js,.vue src --fix",
-    "format": "prettier --write \"src/**/*.{js,vue,json,css,scss}\""
+    "format": "prettier --write \"src/**/*.{js,vue,json,css,scss}\"",
+    "deploy:check": "node scripts/deploy-check.js",
+    "deploy:staging": "npm run build:staging && node scripts/deploy.js staging",
+    "deploy:production": "npm run build:production && node scripts/deploy.js production"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",

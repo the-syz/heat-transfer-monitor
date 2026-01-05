@@ -1,0 +1,72 @@
+@use 'sass:map';
+@use 'variables' as *;
+
+// 响应式mixin
+@mixin respond-to($breakpoint) {
+  @if map.has-key($breakpoints, $breakpoint) {
+    @media (min-width: map.get($breakpoints, $breakpoint)) {
+      @content;
+    }
+  } @else {
+    @warn "Unknown breakpoint: #{$breakpoint}";
+  }
+}
+
+// 颜色获取函数
+@function color($color-name, $variant: null) {
+  @if $variant == null {
+    @return map.get($colors, $color-name);
+  } @else {
+    @return map.get($colors, #{$color-name}-#{$variant});
+  }
+}
+
+// 间距获取函数
+@function spacing($size) {
+  @return map.get($spacings, $size);
+}
+
+// 字体大小函数
+@function font-size($size) {
+  @if $size == 'sm' {
+    @return $font-size-sm;
+  } @else if $size == 'lg' {
+    @return $font-size-lg;
+  } @else {
+    @return $font-size-base;
+  }
+}
+
+// 弹性布局辅助
+@mixin flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+// 文本截断
+@mixin text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// 多行文本截断
+@mixin text-truncate-multiline($lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+

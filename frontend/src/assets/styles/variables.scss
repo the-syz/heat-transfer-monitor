@@ -1,0 +1,82 @@
+// 颜色系统
+$colors: (
+  // 主色调
+  primary: #1a237e,
+  primary-light: #534bae,
+  primary-dark: #000051,
+  
+  // 辅助色
+  secondary: #00bcd4,
+  secondary-light: #62efff,
+  secondary-dark: #008ba3,
+  
+  // 状态色
+  success: #4caf50,
+  warning: #ff9800,
+  error: #f44336,
+  info: #2196f3,
+  
+  // 中性色
+  white: #ffffff,
+  gray-50: #fafafa,
+  gray-100: #f5f5f5,
+  gray-200: #eeeeee,
+  gray-300: #e0e0e0,
+  gray-400: #bdbdbd,
+  gray-500: #9e9e9e,
+  gray-600: #757575,
+  gray-700: #616161,
+  gray-800: #424242,
+  gray-900: #212121,
+  black: #000000
+);
+
+// 字体系统
+$font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'WenQuanYi Micro Hei', sans-serif;
+$font-size-base: 14px;
+$font-size-sm: 12px;
+$font-size-lg: 16px;
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-bold: 600;
+
+// 间距系统
+$spacings: (
+  0: 0,
+  1: 4px,
+  2: 8px,
+  3: 12px,
+  4: 16px,
+  5: 20px,
+  6: 24px,
+  7: 28px,
+  8: 32px,
+  9: 36px,
+  10: 40px
+);
+
+// 响应式断点
+$breakpoints: (
+  'xs': 0,
+  'sm': 576px,
+  'md': 768px,
+  'lg': 992px,
+  'xl': 1200px,
+  'xxl': 1400px
+);
+
+@use 'sass:map';
+
+// 边框
+$border-radius: 4px;
+$border-width: 1px;
+$border-color: map.get($colors, gray-300);
+
+// 阴影
+$box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+$box-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.15);
+
+// 动画
+$transition-duration: 0.3s;
+$transition-timing: ease-in-out;
+

@@ -1,0 +1,88 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+/* 基础样式重置 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: $font-size-base;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: $font-family;
+  font-weight: $font-weight-normal;
+  color: color(gray-900);
+  background-color: color(white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// 链接
+a {
+  color: color(primary);
+  text-decoration: none;
+  background-color: transparent;
+  
+  &:hover {
+    color: color(primary-dark);
+    text-decoration: underline;
+  }
+}
+
+// 图片
+img {
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+  border-style: none;
+}
+
+// 列表
+ul,
+ol {
+  list-style: none;
+}
+
+// 表单元素
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 100%;
+  line-height: 1.15;
+  margin: 0;
+}
+
+button {
+  overflow: visible;
+  text-transform: none;
+}
+
+button,
+[type='button'],
+[type='reset'],
+[type='submit'] {
+  -webkit-appearance: button;
+}
+
+// 表格
+table {
+  border-collapse: collapse;
+}
+
+// 隐藏元素
+[hidden] {
+  display: none !important;
+}
+

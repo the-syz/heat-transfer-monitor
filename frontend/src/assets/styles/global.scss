@@ -1,0 +1,76 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+@use 'reset';
+
+// 全局样式
+:root {
+  // CSS变量定义
+  --color-primary: #{color(primary)};
+  --color-primary-light: #{color(primary-light)};
+  --color-primary-dark: #{color(primary-dark)};
+  --color-secondary: #{color(secondary)};
+  --color-success: #{color(success)};
+  --color-warning: #{color(warning)};
+  --color-error: #{color(error)};
+  --color-info: #{color(info)};
+  
+  // 布局变量
+  --header-height: 64px;
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  
+  // 动画变量
+  --transition-duration: #{$transition-duration};
+  --transition-timing: #{$transition-timing};
+}
+
+// 滚动条样式
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: color(gray-100);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color(gray-400);
+  border-radius: 4px;
+  
+  &:hover {
+    background: color(gray-500);
+  }
+}
+
+// 工具类
+.text-truncate {
+  @include text-truncate;
+}
+
+.flex-center {
+  @include flex-center;
+}
+
+.flex-between {
+  @include flex-between;
+}
+
+.flex-column {
+  @include flex-column;
+}
+
+// 响应式工具类
+@each $breakpoint, $value in $breakpoints {
+  @include respond-to($breakpoint) {
+    .hidden-#{$breakpoint} {
+      display: none !important;
+    }
+    
+    .visible-#{$breakpoint} {
+      display: block !important;
+    }
+  }
+}
+
