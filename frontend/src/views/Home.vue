@@ -14,12 +14,7 @@
                 </div>
               </template>
               <p>系统正在初始化中...</p>
-              <el-button
-                type="primary"
-                @click="goToLogin"
-              >
-                前往登录
-              </el-button>
+              <el-button type="primary" @click="goToLogin"> 前往登录 </el-button>
             </el-card>
           </el-col>
         </el-row>

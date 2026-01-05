@@ -20,7 +20,7 @@ app.use(pinia)
 app.use(ElementPlus, {
   // 全局配置
   size: 'default',
-  zIndex: 2000
+  zIndex: 2000,
 })
 
 // 注册所有Element Plus图标

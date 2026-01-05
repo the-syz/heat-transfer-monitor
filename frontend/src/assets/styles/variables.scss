@@ -4,18 +4,18 @@ $colors: (
   primary: #1a237e,
   primary-light: #534bae,
   primary-dark: #000051,
-  
+
   // 辅助色
   secondary: #00bcd4,
   secondary-light: #62efff,
   secondary-dark: #008ba3,
-  
+
   // 状态色
   success: #4caf50,
   warning: #ff9800,
   error: #f44336,
   info: #2196f3,
-  
+
   // 中性色
   white: #ffffff,
   gray-50: #fafafa,
@@ -32,7 +32,9 @@ $colors: (
 );
 
 // 字体系统
-$font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'WenQuanYi Micro Hei', sans-serif;
+$font-family:
+  'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'WenQuanYi Micro Hei',
+  sans-serif;
 $font-size-base: 14px;
 $font-size-sm: 12px;
 $font-size-lg: 16px;
@@ -52,7 +54,7 @@ $spacings: (
   7: 28px,
   8: 32px,
   9: 36px,
-  10: 40px
+  10: 40px,
 );
 
 // 响应式断点
@@ -62,7 +64,7 @@ $breakpoints: (
   'md': 768px,
   'lg': 992px,
   'xl': 1200px,
-  'xxl': 1400px
+  'xxl': 1400px,
 );
 
 @use 'sass:map';
@@ -79,4 +81,3 @@ $box-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.15);
 // 动画
 $transition-duration: 0.3s;
 $transition-timing: ease-in-out;
-

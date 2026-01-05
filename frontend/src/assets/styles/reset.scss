@@ -31,7 +31,7 @@ a {
   color: color(primary);
   text-decoration: none;
   background-color: transparent;
-  
+
   &:hover {
     color: color(primary-dark);
     text-decoration: underline;
@@ -85,4 +85,3 @@ table {
 [hidden] {
   display: none !important;
 }
-

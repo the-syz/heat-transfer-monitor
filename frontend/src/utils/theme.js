@@ -16,8 +16,8 @@ export const themes = {
       border: '#e0e0e0',
       success: '#4caf50',
       warning: '#ff9800',
-      error: '#f44336'
-    }
+      error: '#f44336',
+    },
   },
   dark: {
     name: 'dark',
@@ -31,8 +31,8 @@ export const themes = {
       border: '#424242',
       success: '#66bb6a',
       warning: '#ffb74d',
-      error: '#ef5350'
-    }
+      error: '#ef5350',
+    },
   },
   blue: {
     name: 'blue',
@@ -46,9 +46,9 @@ export const themes = {
       border: '#cfd8dc',
       success: '#43a047',
       warning: '#ffa726',
-      error: '#e53935'
-    }
-  }
+      error: '#e53935',
+    },
+  },
 }
 
 // 当前主题
@@ -70,21 +70,21 @@ export function setTheme(themeName) {
     console.warn(`主题 ${themeName} 不存在，使用默认主题`)
     themeName = 'light'
   }
-  
+
   currentTheme = themeName
   const theme = themes[themeName]
-  
+
   // 更新CSS变量
   Object.entries(theme.colors).forEach(([key, value]) => {
     document.documentElement.style.setProperty(`--color-${key}`, value)
   })
-  
+
   // 保存到localStorage
   localStorage.setItem('theme', themeName)
-  
+
   // 触发主题变更事件
   window.dispatchEvent(new CustomEvent('theme-change', { detail: theme }))
-  
+
   return theme
 }
 
@@ -105,4 +105,3 @@ export function toggleTheme() {
   const nextIndex = (currentIndex + 1) % themesList.length
   return setTheme(themesList[nextIndex])
 }
-
